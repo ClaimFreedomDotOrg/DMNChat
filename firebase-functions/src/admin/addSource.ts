@@ -5,6 +5,7 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
 
 interface AddSourceData {
   type: "github";
@@ -23,8 +24,7 @@ export const addContextSource = onCall<AddSourceData>(
     }
 
     // Admin check - verify user role in Firestore
-    const admin = await import("firebase-admin");
-    const db = admin.firestore();
+    const db = getFirestore();
     const userDoc = await db.collection("users").doc(request.auth.uid).get();
 
     if (!userDoc.exists || userDoc.data()?.role !== "admin") {

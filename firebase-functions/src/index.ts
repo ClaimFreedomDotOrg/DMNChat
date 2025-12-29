@@ -16,5 +16,5 @@ initializeApp();
 // Export individual function modules
 export { sendMessage, getChatHistory, streamResponse } from "./chat/index.js";
 export { indexRepository, searchContext, updateRepositoryCache } from "./context/index.js";
-export { addContextSource, removeContextSource, getSystemStats } from "./admin/index.js";
-export { createUserProfile, deleteUserData } from "./user/index.js";
+export { addContextSource, removeContextSource, getSystemStats, setAdminRole } from "./admin/index.js";
+export { createUserProfile, deleteUserData, updateUserRole } from "./user/index.js";
