@@ -25,29 +25,29 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const isAdmin = userProfile?.role === 'admin';
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10">
-      <div className="flex items-center gap-3">
+    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {user && (
           <button
             onClick={onToggleHistory}
-            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-slate-800 rounded-md text-slate-400 transition-colors flex-shrink-0"
             aria-label="Toggle chat history"
             title="Toggle chat history"
           >
-            <Menu size={20} />
+            <Menu size={18} className="sm:w-5 sm:h-5" />
           </button>
         )}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-900/20">
-            <Sparkles className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-900/20 flex-shrink-0">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
+          <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
             DMN
           </h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <div className="text-xs text-slate-500 font-mono hidden sm:block">
           {repoCount > 0
             ? `${repoCount} Knowledge Base${repoCount > 1 ? 's' : ''} Loaded`
@@ -56,22 +56,22 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
         {/* Auth button */}
         {user ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             {isAdmin && (
               <button
                 onClick={onOpenAdmin}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-colors flex-shrink-0"
                 title="Open Admin Dashboard"
               >
-                <Settings size={16} />
-                <span className="hidden sm:inline">Admin</span>
+                <Settings size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden md:inline">Admin</span>
               </button>
             )}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
-              <UserIcon size={14} className="text-slate-400" />
-              <span className="text-xs text-slate-300">{user.email}</span>
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg max-w-[200px]">
+              <UserIcon size={14} className="text-slate-400 flex-shrink-0" />
+              <span className="text-xs text-slate-300 truncate">{user.email}</span>
               {isAdmin && (
-                <span className="ml-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] rounded">
+                <span className="ml-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] rounded flex-shrink-0">
                   ADMIN
                 </span>
               )}

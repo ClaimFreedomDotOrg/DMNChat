@@ -80,7 +80,7 @@ const ChatView: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
+    <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
       {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
@@ -93,6 +93,14 @@ const ChatView: React.FC = () => {
         onClose={() => setAdminDashboardOpen(false)}
       />
 
+      {/* Backdrop overlay for mobile sidebar */}
+      {historySidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setHistorySidebarOpen(false)}
+        />
+      )}
+
       {/* Chat History Sidebar */}
       <ChatHistorySidebar
         isOpen={historySidebarOpen}
@@ -103,7 +111,10 @@ const ChatView: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${historySidebarOpen ? 'ml-80' : 'ml-0'}`}>
+      <div
+        className="flex-1 flex flex-col h-full relative"
+        onClick={() => historySidebarOpen && setHistorySidebarOpen(false)}
+      >
         <ChatHeader
           repoCount={repos.length}
           user={user}
@@ -117,11 +128,11 @@ const ChatView: React.FC = () => {
         {/* Error Display */}
         {error && (
           <div className="px-4 py-3 bg-red-900/20 border-b border-red-900/50">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+              <p className="text-sm text-red-400 flex-1 min-w-0">{error}</p>
               <button
                 onClick={clearError}
-                className="text-red-400 hover:text-red-300"
+                className="text-red-400 hover:text-red-300 flex-shrink-0"
               >
                 <X size={16} />
               </button>
@@ -132,7 +143,7 @@ const ChatView: React.FC = () => {
         {/* Auth Status */}
         {!authLoading && !user && (
           <div className="px-4 py-3 bg-amber-900/20 border-b border-amber-900/50">
-            <div className="max-w-4xl mx-auto flex items-center justify-center gap-3">
+            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
               <p className="text-sm text-amber-400 text-center">
                 Please sign in to chat with DMN. A free plan is available for all users.
               </p>
@@ -148,14 +159,14 @@ const ChatView: React.FC = () => {
 
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="min-h-full pb-32">
+          <div className="min-h-full pb-24 sm:pb-32">
             {messages.map(msg => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
             {isTyping && (
-              <div className="flex w-full py-6 px-4 max-w-4xl mx-auto gap-6">
-                <div className="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center flex-shrink-0 animate-pulse">
-                  <span className="text-white text-sm">D</span>
+              <div className="flex w-full py-4 sm:py-6 px-3 sm:px-4 max-w-4xl mx-auto gap-3 sm:gap-6">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 flex items-center justify-center flex-shrink-0 animate-pulse">
+                  <span className="text-white text-xs sm:text-sm">D</span>
                 </div>
                 <div className="flex items-center gap-1 text-slate-500 text-sm">
                   <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
