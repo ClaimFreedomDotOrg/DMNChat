@@ -265,6 +265,7 @@ export const indexRepository = onCall<IndexRepositoryData>(
             try {
               const content = await downloadFileContent(file.download_url, token);
               const chunks = chunkContent(content);
+              logger.info(`File ${file.path}: ${content.length} bytes, ${chunks.length} chunks`);
               return { file, chunks };
             } catch (error) {
               logger.error(`Error processing file ${file.path}:`, error);
@@ -276,6 +277,7 @@ export const indexRepository = onCall<IndexRepositoryData>(
         // Store chunks in Firestore
         const chunksCollection = db.collection("chunks");
         const writeBatch = db.batch();
+        let batchChunkCount = 0;
 
         for (const { file, chunks } of fileContents) {
           for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
@@ -293,10 +295,16 @@ export const indexRepository = onCall<IndexRepositoryData>(
               createdAt: FieldValue.serverTimestamp()
             });
             totalChunks++;
+            batchChunkCount++;
           }
         }
 
-        await writeBatch.commit();
+        if (batchChunkCount > 0) {
+          await writeBatch.commit();
+          logger.info(`Committed batch with ${batchChunkCount} chunks`);
+        } else {
+          logger.warn(`Batch ${i / BATCH_SIZE + 1} has no chunks to commit`);
+        }
         processedFiles += batch.length;
 
         // Update progress
