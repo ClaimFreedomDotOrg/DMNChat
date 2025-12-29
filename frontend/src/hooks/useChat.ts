@@ -62,8 +62,10 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     // Clear any previous errors
     setError(null);
 
+    // Generate unique ID with timestamp + random component
+    const userMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: userMsgId,
       role: 'user',
       text: text,
       timestamp: Date.now()
@@ -104,7 +106,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         } catch (aiError: any) {
           console.error('AI service error:', aiError);
           // Fallback if backend not ready
-          responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please ensure Firebase Functions are deployed and configured correctly.`;
+          responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please try again later.`;
         }
       } else {
         // Guest mode - no backend call
@@ -112,12 +114,14 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         responseText = "Please sign in to chat with DMN. A free plan is available, providing AI-powered responses grounded in the Neuro-Gnostic framework.";
       }
 
+      // Generate unique ID with timestamp + random component
+      const botMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const botMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: botMsgId,
         role: 'model',
         text: responseText,
         timestamp: Date.now(),
-        citations
+        ...(citations && citations.length > 0 ? { citations } : {})
       };
 
       setMessages(prev => [...prev, botMsg]);
@@ -132,8 +136,10 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       }
     } catch (err: any) {
       console.error('Error sending message:', err);
+      // Generate unique ID with timestamp + random component
+      const errorMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: errorMsgId,
         role: 'model',
         text: `Error: ${err.message || 'Something went wrong processing your request.'}`,
         timestamp: Date.now(),

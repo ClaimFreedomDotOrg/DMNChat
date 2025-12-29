@@ -46,12 +46,29 @@ export const sendMessage = onCall<SendMessageData>(
     try {
       const db = getFirestore();
 
-      // Save user message
-      await db
+      // Verify chat exists or create it
+      const chatRef = db
         .collection("users")
         .doc(userId)
         .collection("chats")
-        .doc(chatId)
+        .doc(chatId);
+
+      const chatDoc = await chatRef.get();
+      if (!chatDoc.exists) {
+        // Create the chat if it doesn't exist
+        await chatRef.set({
+          title: "New Chat",
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          metadata: {
+            messageCount: 0,
+            tokensUsed: 0
+          }
+        });
+      }
+
+      // Save user message
+      await chatRef
         .collection("messages")
         .add({
           role: "user",
@@ -66,18 +83,24 @@ export const sendMessage = onCall<SendMessageData>(
 You help users understand their true nature beyond mental conditioning.
 Be precise, compassionate, and direct.`;
 
-      // Dynamically import Genkit to avoid cold start / deployment timeout issues
-      const { genkit } = await import("genkit");
-      const { googleAI, gemini15Flash } = await import("@genkit-ai/googleai");
+      // Check if API key is available
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY secret not configured");
+      }
 
-      // Initialize Genkit with Google AI plugin using the secret
+      // Use Firebase AI (Vertex AI) with Genkit
+      const { genkit } = await import("genkit");
+      const { googleAI } = await import("@genkit-ai/googleai");
+
+      // Initialize Genkit with Google AI plugin
       const ai = genkit({
-        plugins: [googleAI({ apiKey: geminiApiKey.value() })],
-        model: gemini15Flash,
+        plugins: [googleAI({ apiKey })],
       });
 
-      // Generate AI response using Genkit
+      // Generate AI response - use working model name
       const { text } = await ai.generate({
+        model: "googleai/gemini-2.0-flash",
         prompt: `${systemPrompt}\n\nUser: ${message}\n\nDMN:`,
         config: {
           temperature: 0.7,
@@ -86,11 +109,7 @@ Be precise, compassionate, and direct.`;
       });
 
       // Save AI response
-      const aiMessageRef = await db
-        .collection("users")
-        .doc(userId)
-        .collection("chats")
-        .doc(chatId)
+      const aiMessageRef = await chatRef
         .collection("messages")
         .add({
           role: "model",
@@ -99,11 +118,7 @@ Be precise, compassionate, and direct.`;
         });
 
       // Update chat metadata
-      await db
-        .collection("users")
-        .doc(userId)
-        .collection("chats")
-        .doc(chatId)
+      await chatRef
         .set({
           updatedAt: FieldValue.serverTimestamp(),
           lastMessage: text.substring(0, 100)
@@ -114,9 +129,17 @@ Be precise, compassionate, and direct.`;
         responseText: text,
         citations: [] as Citation[]
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in sendMessage:", error);
-      throw new HttpsError("internal", "Failed to generate response");
+      const err = error as Error;
+      console.error("Error details:", {
+        message: err.message,
+        stack: err.stack,
+      });
+      throw new HttpsError(
+        "internal",
+        `Failed to generate response: ${err.message || "Unknown error"}`
+      );
     }
   }
 );

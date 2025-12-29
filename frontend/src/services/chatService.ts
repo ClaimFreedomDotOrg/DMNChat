@@ -128,10 +128,25 @@ export const addMessage = async (
 ): Promise<string> => {
   try {
     const messagesRef = collection(db, 'users', userId, 'chats', chatId, 'messages');
-    const messageDoc = await addDoc(messagesRef, {
-      ...message,
+
+    // Build message data, only including citations if they exist
+    const messageData: any = {
+      role: message.role,
+      text: message.text,
       timestamp: serverTimestamp()
-    });
+    };
+
+    // Only add citations if they are defined and not empty
+    if (message.citations && message.citations.length > 0) {
+      messageData.citations = message.citations;
+    }
+
+    // Only add isError if it's true
+    if (message.isError) {
+      messageData.isError = message.isError;
+    }
+
+    const messageDoc = await addDoc(messagesRef, messageData);
 
     return messageDoc.id;
   } catch (error) {
