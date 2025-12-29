@@ -12,7 +12,7 @@ When connecting this repository to Cloudflare Pages, use these settings:
 
 **Build Configuration:**
 
-- **Framework preset**: `Vite`
+- **Framework preset**: `None` (or leave blank)
 - **Build command**: `npm run build`
 - **Build output directory**: `dist`
 - **Root directory**: `frontend`
