@@ -29,14 +29,14 @@ export const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
     {
       name: 'seeker',
       displayName: 'Dedicated Seeker',
-      messagesPerDay: 30,
-      description: 'Deepen your practice with 30 messages per day',
+      messagesPerDay: 300,
+      description: 'Deepen your practice with 300 messages per day',
     },
     {
       name: 'awakened',
       displayName: 'Awakened Soul',
-      messagesPerDay: 100,
-      description: 'Expanded access with 100 messages per day',
+      messagesPerDay: 1000,
+      description: 'Expanded access with 1000 messages per day',
     },
     {
       name: 'illuminated',
