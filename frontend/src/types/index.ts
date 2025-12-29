@@ -24,6 +24,7 @@ export interface Repository {
   status: 'pending' | 'indexing' | 'ready' | 'error';
   progress?: number;
   fileCount?: number;
+  chunkCount?: number;
   error?: string;
 }
 

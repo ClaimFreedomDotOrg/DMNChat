@@ -138,6 +138,7 @@ export const getContextSources = async (): Promise<Repository[]> => {
         status: data.status.state,
         progress: data.status.progress,
         fileCount: data.stats.fileCount,
+        chunkCount: data.stats.chunkCount,
         error: data.status.error
       } as Repository;
     });
@@ -166,6 +167,7 @@ export const subscribeToContextSources = (
         status: data.status.state,
         progress: data.status.progress,
         fileCount: data.stats.fileCount,
+        chunkCount: data.stats.chunkCount,
         error: data.status.error
       } as Repository;
     });

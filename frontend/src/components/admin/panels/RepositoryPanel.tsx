@@ -166,9 +166,14 @@ const RepositoryPanel: React.FC = () => {
                         </a>
                       </p>
                       {repo.status === 'ready' && (
-                        <p className="text-sm text-emerald-400">
-                          {repo.fileCount || 0} files indexed
-                        </p>
+                        <div className="flex gap-4 text-sm">
+                          <p className="text-emerald-400">
+                            <span className="text-slate-500">Files:</span> {repo.fileCount || 0}
+                          </p>
+                          <p className="text-sky-400">
+                            <span className="text-slate-500">Chunks:</span> {repo.chunkCount || 0}
+                          </p>
+                        </div>
                       )}
                       {repo.status === 'error' && repo.error && (
                         <p className="text-sm text-red-400">{repo.error}</p>
