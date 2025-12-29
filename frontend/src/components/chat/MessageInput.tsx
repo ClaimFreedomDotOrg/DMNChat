@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Send } from 'lucide-react';
 
 interface MessageInputProps {
@@ -8,12 +8,27 @@ interface MessageInputProps {
   disabled?: boolean;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({
-  value,
-  onChange,
-  onSend,
-  disabled = false
-}) => {
+export interface MessageInputRef {
+  focus: () => void;
+}
+
+const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
+  { value, onChange, onSend, disabled = false },
+  ref
+) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Expose focus method to parent component
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus();
+    }
+  }));
+
+  // Auto-focus on mount
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (value.trim() && !disabled) {
@@ -33,6 +48,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       <div className="max-w-4xl mx-auto">
         <div className="relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl shadow-black/50 focus-within:ring-2 focus-within:ring-sky-500/50 focus-within:border-sky-500 transition-all">
           <textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -58,6 +74,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       </div>
     </div>
   );
-};
+});
+
+MessageInput.displayName = 'MessageInput';
 
 export default MessageInput;

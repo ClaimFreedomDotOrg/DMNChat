@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<{ focus: () => void }>(null);
 
   const { user, profile, loading: authLoading } = useAuth();
   const { messages, isTyping, error, sendMessage, clearError } = useChat(currentChatId || undefined);
@@ -46,6 +47,8 @@ const App: React.FC = () => {
     if (!messageText.trim() || isTyping) return;
     setInput('');
     await sendMessage(messageText);
+    // Focus input after sending message
+    setTimeout(() => messageInputRef.current?.focus(), 0);
   };
 
   const handleSignOut = async () => {
@@ -156,6 +159,7 @@ const App: React.FC = () => {
 
         {/* Input Area */}
         <MessageInput
+          ref={messageInputRef}
           value={input}
           onChange={setInput}
           onSend={handleSendMessage}
