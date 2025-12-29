@@ -5,3 +5,4 @@
 export { addContextSource } from "./addSource.js";
 export { removeContextSource } from "./removeSource.js";
 export { getSystemStats } from "./getStats.js";
+export { setAdminRole } from "./setAdminRole.js";
