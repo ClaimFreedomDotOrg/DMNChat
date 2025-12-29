@@ -112,7 +112,7 @@ const ChatView: React.FC = () => {
 
       {/* Main Content */}
       <div
-        className="flex-1 flex flex-col h-full relative"
+        className="flex-1 flex flex-col h-full min-h-0 relative"
         onClick={() => historySidebarOpen && setHistorySidebarOpen(false)}
       >
         <ChatHeader
@@ -158,8 +158,8 @@ const ChatView: React.FC = () => {
         )}
 
         {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="min-h-full pb-4">
+        <div className="flex-1 overflow-y-auto scroll-smooth min-h-0">
+          <div className="min-h-full p-4 pb-2">
             {messages.map(msg => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
