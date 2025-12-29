@@ -44,7 +44,7 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
   };
 
   return (
-    <div className="flex-shrink-0 p-3 sm:p-4 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
+    <div className="flex-shrink-0 px-3 pt-3 pb-4 sm:px-4 sm:pt-4 sm:pb-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
       <div className="max-w-4xl mx-auto">
         <div className="relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl shadow-black/50 focus-within:ring-2 focus-within:ring-sky-500/50 focus-within:border-sky-500 transition-all">
           <textarea
