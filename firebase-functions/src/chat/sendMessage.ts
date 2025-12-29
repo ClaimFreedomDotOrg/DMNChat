@@ -7,8 +7,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { genkit } from "genkit";
-import { googleAI } from "@genkit-ai/google-genai";
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
@@ -202,6 +200,10 @@ Now, respond to the user's message with precision, compassion, and the clarity o
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY secret not configured");
       }
+
+      // Dynamically import Genkit modules to reduce cold start time
+      const { genkit } = await import("genkit");
+      const { googleAI } = await import("@genkit-ai/google-genai");
 
       // Initialize Genkit with Google AI plugin
       const ai = genkit({
