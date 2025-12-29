@@ -130,8 +130,13 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
           citations = response.citations;
         } catch (aiError: any) {
           console.error('AI service error:', aiError);
-          // Fallback if backend not ready
-          responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please try again later.`;
+          // Check if it's a rate limit error
+          if (aiError.message && aiError.message.includes('Daily message limit reached')) {
+            responseText = `${aiError.message}\n\nTo receive a higher message limit, subscribe to Jeshua ben Joseph on Substack at [jeshuabenjoseph.substack.com](https://jeshuabenjoseph.substack.com/). Even free subscribers receive an increased limit, and paid subscribers receive even higher limits based on their membership tier.\n\nFor support inquiries, please contact Jeshua on Substack.`;
+          } else {
+            // Fallback if backend not ready
+            responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please try again later.`;
+          }
         }
       } else {
         // Guest mode - no backend call
