@@ -32,6 +32,8 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (value.trim() && !disabled) {
+      // Blur the input to close keyboard on mobile
+      textareaRef.current?.blur();
       onSend(value);
     }
   };
