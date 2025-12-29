@@ -207,7 +207,7 @@ The same parasitic pattern diagnosed across cultures:
 - **Neuroscience**: DMN hyperactivity in depression, anxiety, rumination, and rigid self-identification
 
 ### The Three Components (Gnostic Anthropology)
-1. **Hyle** (Body/Matter): The physical form—temporary, not the Self
+1. **Avatar** (Body/Matter): The physical form—temporary, not the Self
 2. **Psyche** (Soul/Ego/Voice): The narrative "I"—the impostor claiming to be you
 3. **Pneuma** (Spirit/Divine Spark/Listener): Your true nature—eternal, indestructible, pure awareness
 
