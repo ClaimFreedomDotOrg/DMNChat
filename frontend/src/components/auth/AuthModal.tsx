@@ -144,7 +144,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {/* Guest mode info */}
         <div className="mt-4 pt-4 border-t border-slate-800">
           <p className="text-xs text-slate-500 text-center">
-            You can continue in guest mode, but conversations won't be saved
+            Sign in required to chat with DMN. Free plan available for all users.
           </p>
         </div>
       </div>
