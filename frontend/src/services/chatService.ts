@@ -147,9 +147,9 @@ export const deleteChat = async (userId: string, chatId: string): Promise<void> 
   try {
     // TODO: Implement cascade delete of messages subcollection
     // For now, just delete the chat document
-    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    // const chatRef = doc(db, 'users', userId, 'chats', chatId);
     // await deleteDoc(chatRef);
-    console.warn('Delete chat not fully implemented');
+    console.warn('Delete chat not fully implemented', userId, chatId);
   } catch (error) {
     console.error('Error deleting chat:', error);
     throw new Error('Failed to delete chat');
