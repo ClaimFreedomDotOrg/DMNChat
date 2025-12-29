@@ -1,0 +1,128 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+.yarn/
+.pnpm-store/
+
+# Testing
+/coverage
+*.lcov
+.nyc_output
+
+# Production builds
+/build
+/dist
+/dist-ssr
+/.next
+/out
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+pubsub-debug.log
+functions/lib/
+
+# Firebase Admin SDK Keys (NEVER commit these!)
+*-firebase-adminsdk-*.json
+service-account-*.json
+
+# Firebase Functions
+functions/node_modules/
+functions/dist/
+functions/.runtimeconfig.json
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+
+# TypeScript
+*.tsbuildinfo
+.tsc-cache/
+
+# Vite
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Package manager lock files (committed by default)
+# Uncomment to ignore:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Debug & profiling
+*.cpuprofile
+*.heapsnapshot
+
+# Local development
+.local/
+.vercel/
+.netlify/
+
+# Cloudflare
+.wrangler/
+wrangler.toml.local
+
+# AI/ML model files (if caching embeddings locally)
+*.pkl
+*.pth
+*.onnx
+embeddings-cache/
+
+# Secrets (double check - never commit!)
+secrets/
+*.key
+*.pem
+*.p12
+
+# Documentation build artifacts
+.docusaurus/
+docs/.vuepress/dist/
+
+# Misc
+*.bak
+*.orig
+sources/
