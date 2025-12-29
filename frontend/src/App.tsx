@@ -112,7 +112,7 @@ const ChatView: React.FC = () => {
 
       {/* Main Content */}
       <div
-        className="flex-1 flex flex-col h-full min-h-0 relative pt-16 sm:pt-0"
+        className="flex-1 flex flex-col h-full min-h-0 relative"
         onClick={() => historySidebarOpen && setHistorySidebarOpen(false)}
       >
         <ChatHeader
