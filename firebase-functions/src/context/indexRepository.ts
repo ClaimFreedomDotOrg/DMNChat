@@ -169,8 +169,17 @@ export const indexRepository = onCall<IndexRepositoryData>(
     memory: "1GiB"
   },
   async (request) => {
-    // Admin check
-    if (!request.auth || !request.auth.token.admin) {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required");
+    }
+
+    const db = getFirestore();
+
+    // Admin check - verify user role in Firestore
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+
+    if (!userDoc.exists || userDoc.data()?.role !== "admin") {
       throw new HttpsError("permission-denied", "Admin access required");
     }
 
@@ -180,7 +189,6 @@ export const indexRepository = onCall<IndexRepositoryData>(
       throw new HttpsError("invalid-argument", "sourceId and repoUrl are required");
     }
 
-    const db = getFirestore();
     const sourceRef = db.collection("contextSources").doc(sourceId);
 
     try {

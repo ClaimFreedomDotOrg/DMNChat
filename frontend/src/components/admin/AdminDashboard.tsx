@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Settings, Users, Database, LayoutDashboard, X } from 'lucide-react';
+import { Users, Database, LayoutDashboard, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import RepositoryPanel from './panels/RepositoryPanel';
 import UserManagementPanel from './panels/UserManagementPanel';
-import SystemConfigPanel from './panels/SystemConfigPanel';
 import OverviewPanel from './panels/OverviewPanel';
 
-type Panel = 'overview' | 'repositories' | 'users' | 'config';
+type Panel = 'overview' | 'repositories' | 'users';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -43,7 +42,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'repositories', label: 'Repositories', icon: Database },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'config', label: 'System Config', icon: Settings },
   ] as const;
 
   return (
@@ -104,7 +102,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
             {activePanel === 'overview' && <OverviewPanel />}
             {activePanel === 'repositories' && <RepositoryPanel />}
             {activePanel === 'users' && <UserManagementPanel />}
-            {activePanel === 'config' && <SystemConfigPanel />}
           </div>
         </div>
       </div>

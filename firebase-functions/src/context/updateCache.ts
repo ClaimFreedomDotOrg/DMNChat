@@ -5,6 +5,7 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
 
 interface UpdateCacheData {
   sourceId: string;
@@ -13,8 +14,16 @@ interface UpdateCacheData {
 export const updateRepositoryCache = onCall<UpdateCacheData>(
   { timeoutSeconds: 540 },
   async (request) => {
-    // Admin check
-    if (!request.auth || !request.auth.token.admin) {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required");
+    }
+
+    // Admin check - verify user role in Firestore
+    const db = getFirestore();
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+
+    if (!userDoc.exists || userDoc.data()?.role !== "admin") {
       throw new HttpsError("permission-denied", "Admin access required");
     }
 

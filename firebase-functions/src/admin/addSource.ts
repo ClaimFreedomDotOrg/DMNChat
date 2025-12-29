@@ -17,8 +17,17 @@ interface AddSourceData {
 
 export const addContextSource = onCall<AddSourceData>(
   async (request) => {
-    // Admin check
-    if (!request.auth || !request.auth.token.admin) {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required");
+    }
+
+    // Admin check - verify user role in Firestore
+    const admin = await import("firebase-admin");
+    const db = admin.firestore();
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+
+    if (!userDoc.exists || userDoc.data()?.role !== "admin") {
       throw new HttpsError("permission-denied", "Admin access required");
     }
 

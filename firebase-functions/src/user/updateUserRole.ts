@@ -1,6 +1,6 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { getFirestore } from 'firebase-admin/firestore';
-import { logger } from 'firebase-functions/v2';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import { logger } from "firebase-functions/v2";
 
 /**
  * Update a user's role (admin only)
@@ -11,31 +11,31 @@ export const updateUserRole = onCall(async (request) => {
 
   // Check if caller is authenticated
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Must be authenticated');
+    throw new HttpsError("unauthenticated", "Must be authenticated");
   }
 
   // Verify caller is admin
-  const callerDoc = await db.collection('users').doc(request.auth.uid).get();
+  const callerDoc = await db.collection("users").doc(request.auth.uid).get();
   const callerData = callerDoc.data();
 
-  if (!callerData || callerData.role !== 'admin') {
-    throw new HttpsError('permission-denied', 'Only admins can update user roles');
+  if (!callerData || callerData.role !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can update user roles");
   }
 
   // Get target user and new role from request
   const { userId, role } = request.data;
 
   if (!userId || !role) {
-    throw new HttpsError('invalid-argument', 'userId and role are required');
+    throw new HttpsError("invalid-argument", "userId and role are required");
   }
 
-  if (role !== 'user' && role !== 'admin') {
-    throw new HttpsError('invalid-argument', 'role must be either "user" or "admin"');
+  if (role !== "user" && role !== "admin") {
+    throw new HttpsError("invalid-argument", "role must be either \"user\" or \"admin\"");
   }
 
   try {
     // Update user role in Firestore
-    await db.collection('users').doc(userId).set({
+    await db.collection("users").doc(userId).set({
       role: role
     }, { merge: true });
 
@@ -46,8 +46,8 @@ export const updateUserRole = onCall(async (request) => {
       message: `User role updated to ${role}`,
       userId: userId
     };
-  } catch (error: any) {
-    logger.error('Error updating user role:', error);
-    throw new HttpsError('internal', error.message || 'Failed to update user role');
+  } catch (error: unknown) {
+    logger.error("Error updating user role:", error);
+    throw new HttpsError("internal", (error as Error).message || "Failed to update user role");
   }
 });
