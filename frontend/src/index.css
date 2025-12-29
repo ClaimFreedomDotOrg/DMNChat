@@ -20,14 +20,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* Prevent pull-to-refresh on mobile */
   overscroll-behavior: none;
-  /* Push content down on mobile to be visible */
-  padding-top: 2rem;
-}
-
-@media (min-width: 640px) {
-  body {
-    padding-top: 0;
-  }
 }
 
 #root {
