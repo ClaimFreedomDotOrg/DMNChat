@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Repository } from '@/types';
 import { Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { addContextSource, removeContextSource, subscribeToContextSources, reindexRepository } from '@/services/adminService';
 
 interface RepoManagerProps {
   repos: Repository[];
@@ -11,69 +12,51 @@ const RepoManager: React.FC<RepoManagerProps> = ({ repos, setRepos }) => {
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
   const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Subscribe to real-time updates from Firestore
+  useEffect(() => {
+    const unsubscribe = subscribeToContextSources((updatedRepos) => {
+      setRepos(updatedRepos);
+    });
+
+    return () => unsubscribe();
+  }, [setRepos]);
 
   const handleAddRepo = async () => {
     if (!repoUrl.trim()) return;
 
     setIsAdding(true);
-    const newRepo: Repository = {
-      id: Date.now().toString(),
-      name: extractRepoName(repoUrl),
-      url: repoUrl,
-      branch: branch || 'main',
-      status: 'pending',
-      progress: 0
-    };
+    setError(null);
 
-    setRepos(prev => [...prev, newRepo]);
-    setRepoUrl('');
-    setBranch('main');
-
-    // TODO: Implement actual API call to index repository
-    // Simulate indexing process
-    setTimeout(() => {
-      setRepos(prev => prev.map(r =>
-        r.id === newRepo.id
-          ? { ...r, status: 'indexing' as const, progress: 50 }
-          : r
-      ));
-    }, 1000);
-
-    setTimeout(() => {
-      setRepos(prev => prev.map(r =>
-        r.id === newRepo.id
-          ? { ...r, status: 'ready' as const, progress: 100, fileCount: 42 }
-          : r
-      ));
+    try {
+      await addContextSource(repoUrl, branch || 'main');
+      setRepoUrl('');
+      setBranch('main');
+    } catch (err) {
+      console.error('Error adding repository:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add repository');
+    } finally {
       setIsAdding(false);
-    }, 3000);
+    }
   };
 
-  const handleRemoveRepo = (id: string) => {
-    setRepos(prev => prev.filter(r => r.id !== id));
+  const handleRemoveRepo = async (id: string) => {
+    try {
+      await removeContextSource(id);
+    } catch (err) {
+      console.error('Error removing repository:', err);
+      setError(err instanceof Error ? err.message : 'Failed to remove repository');
+    }
   };
 
-  const handleRefreshRepo = (id: string) => {
-    setRepos(prev => prev.map(r =>
-      r.id === id
-        ? { ...r, status: 'indexing' as const, progress: 0 }
-        : r
-    ));
-
-    // TODO: Implement actual re-indexing
-    setTimeout(() => {
-      setRepos(prev => prev.map(r =>
-        r.id === id
-          ? { ...r, status: 'ready' as const, progress: 100 }
-          : r
-      ));
-    }, 2000);
-  };
-
-  const extractRepoName = (url: string): string => {
-    const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
-    if (match) return match[1].replace('.git', '');
-    return url;
+  const handleRefreshRepo = async (id: string) => {
+    try {
+      await reindexRepository(id);
+    } catch (err) {
+      console.error('Error refreshing repository:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh repository');
+    }
   };
 
   const getStatusIcon = (status: Repository['status']) => {
@@ -99,6 +82,11 @@ const RepoManager: React.FC<RepoManagerProps> = ({ repos, setRepos }) => {
 
       {/* Add Repository Form */}
       <div className="p-4 border-b border-slate-800 space-y-3">
+        {error && (
+          <div className="px-3 py-2 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-xs">
+            {error}
+          </div>
+        )}
         <input
           type="text"
           value={repoUrl}
