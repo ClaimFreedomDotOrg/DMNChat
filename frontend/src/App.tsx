@@ -159,7 +159,7 @@ const ChatView: React.FC = () => {
 
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="min-h-full pb-24 sm:pb-32">
+          <div className="min-h-full pb-4">
             {messages.map(msg => (
               <ChatMessage key={msg.id} message={msg} />
             ))}

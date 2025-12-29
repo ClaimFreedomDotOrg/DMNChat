@@ -14,11 +14,20 @@ body {
   background-color: rgb(2 6 23); /* slate-950 */
   color: rgb(226 232 240); /* slate-200 */
   overflow: hidden;
+  /* Prevent iOS Safari zoom and viewport issues */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior: none;
+  /* Ensure proper safe area handling on iOS */
+  padding-top: env(safe-area-inset-top);
 }
 
 #root {
   width: 100%;
   height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height on mobile */
 }
 
 /* Custom scrollbar styles */
@@ -44,6 +53,36 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: rgb(71 85 105) rgb(30 41 59);
+}
+
+/* Mobile keyboard handling */
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific */
+  body {
+    /* Use visual viewport height to account for keyboard */
+    height: -webkit-fill-available;
+  }
+
+  #root {
+    height: -webkit-fill-available;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Allow selection on text elements */
+p, span, div, textarea, input {
+  -webkit-touch-callout: default;
+  user-select: text;
 }
 
 /* Animation keyframes */
