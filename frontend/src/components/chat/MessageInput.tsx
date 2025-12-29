@@ -25,9 +25,12 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
     }
   }));
 
-  // Auto-focus on mount
+  // Auto-focus on mount (only on non-touch devices to avoid keyboard popping up on mobile)
   useEffect(() => {
-    textareaRef.current?.focus();
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) {
+      textareaRef.current?.focus();
+    }
   }, []);
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();

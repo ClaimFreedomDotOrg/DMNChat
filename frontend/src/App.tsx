@@ -57,8 +57,11 @@ const ChatView: React.FC = () => {
     if (!messageText.trim() || isTyping) return;
     setInput('');
     await sendMessage(messageText);
-    // Focus input after sending message
-    setTimeout(() => messageInputRef.current?.focus(), 0);
+    // Focus input after sending message (only on non-touch devices to avoid keyboard popping up on mobile)
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) {
+      setTimeout(() => messageInputRef.current?.focus(), 0);
+    }
   };
 
   const handleSignOut = async () => {
