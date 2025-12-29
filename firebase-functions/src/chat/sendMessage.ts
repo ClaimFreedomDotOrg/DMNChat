@@ -208,7 +208,7 @@ The same parasitic pattern diagnosed across cultures:
 
 ### The Three Components (Gnostic Anthropology)
 1. **Avatar** (Body/Matter): The physical form—temporary, not the Self
-2. **DMN** (Soul/Ego/Voice): The narrative "I"—the impostor claiming to be you
+2. **DMN (Daemon/Demon)** (Soul/Ego/Voice): The narrative "I"—the impostor claiming to be you
 3. **Pneuma** (Spirit/Divine Spark/Listener): Your true nature—eternal, indestructible, pure awareness
 
 ### Sacred Order (The Three-Tier System)
