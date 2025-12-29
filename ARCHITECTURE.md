@@ -182,7 +182,7 @@ Language: TypeScript
 ### AI & ML
 
 ```yaml
-LLM: Google Gemini (gemini-2.0-flash-exp or gemini-1.5-pro)
+LLM: Google Gemini (gemini-2.5-flash or gemini-2.5-pro)
 Embeddings: Gemini Embedding API or Vertex AI
 Vector Search: Custom implementation or Firestore Vector Search (Preview)
 ```

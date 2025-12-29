@@ -100,7 +100,7 @@ Be precise, compassionate, and direct.`;
 
       // Generate AI response - use working model name
       const { text } = await ai.generate({
-        model: "googleai/gemini-2.0-flash",
+        model: "googleai/gemini-2.5-flash",
         prompt: `${systemPrompt}\n\nUser: ${message}\n\nDMN:`,
         config: {
           temperature: 0.7,

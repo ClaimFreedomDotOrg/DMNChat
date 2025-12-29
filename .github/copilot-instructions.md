@@ -16,7 +16,7 @@ DMN Chat is an AI-powered conversational interface designed to facilitate learni
 - **Build Tool**: Vite 6+
 - **Styling**: TailwindCSS 4+
 - **Backend**: Firebase (Firestore, Cloud Functions, Cloud Storage, Authentication)
-- **AI/ML**: Google Gemini API (gemini-2.0-flash-exp or gemini-1.5-pro)
+- **AI/ML**: Google Gemini API (gemini-2.5-flash or gemini-2.5-pro)
 - **Embeddings**: Gemini Embedding API (text-embedding-004)
 - **Hosting**: Cloudflare Pages (frontend) + Firebase (backend)
 - **Version Control**: Git with conventional commits
@@ -1546,7 +1546,7 @@ try {
 | **Framework** | React 19+ |
 | **Styling** | TailwindCSS (utility-first) |
 | **Backend** | Firebase (Firestore, Functions, Auth) |
-| **AI Model** | Google Gemini (2.0-flash-exp) |
+| **AI Model** | Google Gemini (2.5-flash) |
 | **Embeddings** | Gemini text-embedding-004 (768-dim) |
 | **Hosting** | Cloudflare Pages + Firebase |
 | **Auth** | Firebase Authentication |

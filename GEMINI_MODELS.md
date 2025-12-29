@@ -6,8 +6,7 @@ This document lists all available Gemini models from the Google Generative AI AP
 
 ## Recommended Models for DMN Chat
 
-- **gemini-2.0-flash** - Current default, stable and fast
-- **gemini-2.5-flash** - Newer stable version with 1M token context
+- **gemini-2.5-flash** - Current default, stable with 1M token context
 - **gemini-2.5-pro** - Most capable for complex reasoning
 
 ## All Available Models
@@ -93,7 +92,7 @@ This document lists all available Gemini models from the Google Generative AI AP
 Current configuration in `firebase-functions/src/chat/sendMessage.ts`:
 
 ```typescript
-model: "googleai/gemini-2.0-flash"
+model: "googleai/gemini-2.5-flash"
 config: {
   temperature: 0.7,
   maxOutputTokens: 2000,
