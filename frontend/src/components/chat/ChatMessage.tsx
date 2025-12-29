@@ -31,9 +31,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <ReactMarkdown
               components={{
                 p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="text-slate-300">{children}</li>,
+                ul: ({ children }) => <ul className="list-disc ml-6 mb-4 space-y-2">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal ml-6 mb-4 space-y-2">{children}</ol>,
+                li: ({ children }) => <li className="text-slate-300 pl-2">{children}</li>,
                 code: ({ children, className }) => {
                   const isInline = !className?.includes('language-');
                   return isInline ? (
