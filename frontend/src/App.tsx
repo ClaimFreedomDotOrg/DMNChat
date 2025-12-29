@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import ChatMessage from './components/chat/ChatMessage';
 import MessageInput from './components/chat/MessageInput';
 import ChatHeader from './components/chat/ChatHeader';
@@ -12,18 +13,27 @@ import { signOut } from './services/authService';
 import { subscribeToContextSources } from './services/adminService';
 import { X } from 'lucide-react';
 
-const App: React.FC = () => {
+// Chat View Component
+const ChatView: React.FC = () => {
+  const { chatId } = useParams<{ chatId?: string }>();
+  const navigate = useNavigate();
   const [repos, setRepos] = useState<Repository[]>([]);
   const [input, setInput] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<{ focus: () => void }>(null);
 
   const { user, profile, loading: authLoading } = useAuth();
-  const { messages, isTyping, error, sendMessage, clearError } = useChat(currentChatId || undefined);
+  const { messages, isTyping, error, chatId: activeChatId, sendMessage, clearError } = useChat(chatId);
+
+  // Update URL when chatId changes
+  useEffect(() => {
+    if (activeChatId && activeChatId !== chatId) {
+      navigate(`/chat/${activeChatId}`, { replace: true });
+    }
+  }, [activeChatId, chatId, navigate]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -60,12 +70,13 @@ const App: React.FC = () => {
   };
 
   const handleNewChat = () => {
-    setCurrentChatId(null);
+    navigate('/');
     setHistorySidebarOpen(false);
   };
 
-  const handleSelectChat = (chatId: string) => {
-    setCurrentChatId(chatId);
+  const handleSelectChat = (selectedChatId: string) => {
+    navigate(`/chat/${selectedChatId}`);
+    setHistorySidebarOpen(false);
   };
 
   return (
@@ -86,7 +97,7 @@ const App: React.FC = () => {
       <ChatHistorySidebar
         isOpen={historySidebarOpen}
         onClose={() => setHistorySidebarOpen(false)}
-        currentChatId={currentChatId}
+        currentChatId={activeChatId}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
       />
@@ -167,6 +178,16 @@ const App: React.FC = () => {
         />
       </div>
     </div>
+  );
+};
+
+// Main App Component with Routing
+const App: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<ChatView />} />
+      <Route path="/chat/:chatId" element={<ChatView />} />
+    </Routes>
   );
 };
 
