@@ -50,6 +50,22 @@ export interface UserProfile {
   role: 'user' | 'admin';
 }
 
+// System Configuration types
+export interface SystemConfig {
+  ai: {
+    model: string;
+    temperature: number;
+    maxTokens: number;
+  };
+  rag: {
+    chunkSize: number;
+    chunkOverlap: number;
+    maxChunks: number;
+    minSimilarity: number;
+  };
+  systemPrompt: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

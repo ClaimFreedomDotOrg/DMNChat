@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Users, Database, LayoutDashboard, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Database, LayoutDashboard, Settings, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { isSystemConfigInitialized } from '@/services/adminService';
 import RepositoryPanel from './panels/RepositoryPanel';
 import UserManagementPanel from './panels/UserManagementPanel';
 import OverviewPanel from './panels/OverviewPanel';
+import SystemConfigPanel from './panels/SystemConfigPanel';
 
-type Panel = 'overview' | 'repositories' | 'users';
+type Panel = 'overview' | 'repositories' | 'users' | 'config';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -14,7 +16,15 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
   const [activePanel, setActivePanel] = useState<Panel>('overview');
+  const [configInitialized, setConfigInitialized] = useState<boolean | null>(null);
   const { user, profile } = useAuth();
+
+  // Check if system config is initialized
+  useEffect(() => {
+    if (isOpen && profile?.role === 'admin') {
+      isSystemConfigInitialized().then(setConfigInitialized);
+    }
+  }, [isOpen, profile?.role]);
 
   if (!isOpen) return null;
 
@@ -42,6 +52,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'repositories', label: 'Repositories', icon: Database },
     { id: 'users', label: 'Users', icon: Users },
+    { id: 'config', label: 'System Config', icon: Settings },
   ] as const;
 
   return (
@@ -99,9 +110,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
 
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
+            {/* Config Not Initialized Warning */}
+            {configInitialized === false && activePanel !== 'config' && (
+              <div className="m-4 p-4 bg-amber-900/30 border border-amber-700/50 rounded-lg flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-amber-200 font-medium">System Configuration Required</h3>
+                  <p className="text-amber-300/80 text-sm mt-1">
+                    The system configuration has not been initialized. Chat functionality will not work until you configure the system.
+                  </p>
+                  <button
+                    onClick={() => setActivePanel('config')}
+                    className="mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Go to System Configuration
+                  </button>
+                </div>
+              </div>
+            )}
+
             {activePanel === 'overview' && <OverviewPanel />}
             {activePanel === 'repositories' && <RepositoryPanel />}
             {activePanel === 'users' && <UserManagementPanel />}
+            {activePanel === 'config' && (
+              <SystemConfigPanel onConfigSaved={() => setConfigInitialized(true)} />
+            )}
           </div>
         </div>
       </div>

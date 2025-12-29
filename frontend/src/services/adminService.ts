@@ -1,7 +1,8 @@
 import { collection, doc, getDoc, getDocs, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from './firebase';
-import { Repository } from '@/types';
+import { Repository, SystemConfig } from '@/types';
+import { DEFAULT_SYSTEM_CONFIG } from '@/config/systemDefaults';
 
 export interface ContextSource {
   id: string;
@@ -215,6 +216,84 @@ export const updateUserRole = async (
     await updateRoleFn({ userId, role });
   } catch (error) {
     console.error('Error updating user role:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if system configuration has been initialized
+ */
+export const isSystemConfigInitialized = async (): Promise<boolean> => {
+  try {
+    const configRef = doc(db, 'systemConfig', 'settings');
+    const configDoc = await getDoc(configRef);
+    return configDoc.exists();
+  } catch (error) {
+    console.error('Error checking system config:', error);
+    return false;
+  }
+};
+
+/**
+ * Get the current system configuration directly from Firestore
+ */
+export const getSystemConfig = async (): Promise<SystemConfig> => {
+  try {
+    const configRef = doc(db, 'systemConfig', 'settings');
+    const configDoc = await getDoc(configRef);
+
+    if (!configDoc.exists()) {
+      // Return defaults if no config exists yet
+      return DEFAULT_SYSTEM_CONFIG;
+    }
+
+    const data = configDoc.data();
+    return {
+      ai: data?.ai || {},
+      rag: data?.rag || {},
+      systemPrompt: data?.systemPrompt || '',
+    } as SystemConfig;
+  } catch (error) {
+    console.error('Error getting system config:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update the system configuration directly in Firestore
+ */
+export const updateSystemConfigService = async (
+  config: Partial<SystemConfig>
+): Promise<SystemConfig> => {
+  try {
+    const { setDoc } = await import('firebase/firestore');
+    const configRef = doc(db, 'systemConfig', 'settings');
+
+    // Get current config first
+    const currentConfig = await getSystemConfig();
+
+    // Merge with new config
+    const updatedConfig: SystemConfig = {
+      ai: {
+        ...currentConfig.ai,
+        ...(config.ai || {}),
+      },
+      rag: {
+        ...currentConfig.rag,
+        ...(config.rag || {}),
+      },
+      systemPrompt: config.systemPrompt ?? currentConfig.systemPrompt,
+    };
+
+    // Save to Firestore
+    await setDoc(configRef, {
+      ...updatedConfig,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+
+    return updatedConfig;
+  } catch (error) {
+    console.error('Error updating system config:', error);
     throw error;
   }
 };
