@@ -80,7 +80,7 @@ const ChatView: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative">
+    <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden relative" style={{ height: '100vh' }}>
       {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
