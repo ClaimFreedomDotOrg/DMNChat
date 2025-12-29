@@ -297,9 +297,15 @@ Now, respond to the user's message with precision, compassion, and the clarity o
         : "";
 
       // Build conversation history section
-      const historySection = historyMessages.length > 0
-        ? `\n\n# CONVERSATION HISTORY\n\nThe following is the recent conversation history. Use this context to provide coherent, contextually relevant responses that build on previous exchanges.\n\n${historyMessages.map(msg => `${msg.role === "user" ? "User" : "DMN"}: ${msg.text}`).join("\n\n")}\n\n---\n`
-        : "";
+      let historySection = "";
+      if (historyMessages.length > 0) {
+        const formattedHistory = historyMessages.map(msg => {
+          const role = msg.role === "user" ? "User" : "DMN";
+          return `${role}: ${msg.text}`;
+        }).join("\n\n");
+
+        historySection = `\n\n# CONVERSATION HISTORY\n\nThe following is the recent conversation history. Use this context to provide coherent, contextually relevant responses that build on previous exchanges.\n\n${formattedHistory}\n\n---\n`;
+      }
 
       // Check if API key is available
       const apiKey = geminiApiKey.value();
