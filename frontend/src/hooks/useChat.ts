@@ -94,18 +94,22 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       let responseText: string;
       let citations: any[] | undefined;
 
-      if (currentChatId && user) {
+      if (user) {
+        // User is authenticated - call AI service
         try {
-          const response = await sendMessageToAI(currentChatId, text);
+          // Use currentChatId if available, otherwise the AI service will handle it
+          const response = await sendMessageToAI(currentChatId || '', text);
           responseText = response.responseText;
           citations = response.citations;
-        } catch (aiError) {
+        } catch (aiError: any) {
+          console.error('AI service error:', aiError);
           // Fallback if backend not ready
-          responseText = "The backend AI service is not yet fully implemented. Your message was received, but I cannot provide a contextual response yet. Please ensure Firebase Functions are deployed.";
+          responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please ensure Firebase Functions are deployed and configured correctly.`;
         }
       } else {
         // Guest mode - no backend call
-        responseText = "You are in guest mode. Sign in to save your conversation and get AI-powered responses grounded in the Neuro-Gnostic framework.";
+        console.log('User not authenticated, showing guest mode message');
+        responseText = "Please sign in to chat with DMN. A free plan is available, providing AI-powered responses grounded in the Neuro-Gnostic framework.";
       }
 
       const botMsg: Message = {

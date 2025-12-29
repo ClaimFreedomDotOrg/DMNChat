@@ -23,9 +23,11 @@ export const useAuth = () => {
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => {
+        console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
         if (user) {
           try {
             const profile = await getUserProfile(user.uid);
+            console.log('User profile loaded:', profile);
             setState({
               user,
               profile,
@@ -33,6 +35,7 @@ export const useAuth = () => {
               error: null
             });
           } catch (error) {
+            console.error('Error loading user profile:', error);
             setState({
               user,
               profile: null,
@@ -50,6 +53,7 @@ export const useAuth = () => {
         }
       },
       (error) => {
+        console.error('Auth error:', error);
         setState({
           user: null,
           profile: null,

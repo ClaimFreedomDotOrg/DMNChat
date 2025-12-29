@@ -97,10 +97,18 @@ const App: React.FC = () => {
 
         {/* Auth Status */}
         {!authLoading && !user && (
-          <div className="px-4 py-2 bg-amber-900/20 border-b border-amber-900/50">
-            <p className="text-xs text-amber-400 text-center">
-              You are in guest mode. Sign in to save conversations and access full features.
-            </p>
+          <div className="px-4 py-3 bg-amber-900/20 border-b border-amber-900/50">
+            <div className="max-w-4xl mx-auto flex items-center justify-center gap-3">
+              <p className="text-sm text-amber-400 text-center">
+                Please sign in to chat with DMN. A free plan is available for all users.
+              </p>
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
         )}
 
