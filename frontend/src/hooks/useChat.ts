@@ -19,7 +19,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     {
       id: 'welcome',
       role: 'model',
-      text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Load the framework repositories, and let us begin the work of Anamnesis.",
+      text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Let us begin the work of Anamnesis.",
       timestamp: Date.now()
     }
   ]);
@@ -36,7 +36,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       setMessages([{
         id: 'welcome',
         role: 'model',
-        text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Load the framework repositories, and let us begin the work of Anamnesis.",
+        text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Let us begin the work of Anamnesis.",
         timestamp: Date.now()
       }]);
       setChatId(null);
