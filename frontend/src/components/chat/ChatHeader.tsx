@@ -42,7 +42,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             <Menu size={18} className="sm:w-5 sm:h-5" />
           </button>
         )}
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <div
+          className={`flex items-center gap-1.5 sm:gap-2 min-w-0 ${user ? 'cursor-pointer' : ''}`}
+          onClick={user ? onToggleHistory : undefined}
+          role={user ? 'button' : undefined}
+          tabIndex={user ? 0 : undefined}
+          onKeyDown={user ? (e) => e.key === 'Enter' && onToggleHistory() : undefined}
+        >
           <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-900/20 flex-shrink-0">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
