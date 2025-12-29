@@ -8,13 +8,13 @@
  * - User management (createUserProfile, deleteUserData)
  */
 
-import * as admin from 'firebase-admin';
+import { initializeApp } from "firebase-admin/app";
 
 // Initialize Firebase Admin
-admin.initializeApp();
+initializeApp();
 
 // Export individual function modules
-export { sendMessage, getChatHistory, streamResponse } from './chat/index.js';
-export { indexRepository, searchContext, updateRepositoryCache } from './context/index.js';
-export { addContextSource, removeContextSource, getSystemStats } from './admin/index.js';
-export { createUserProfile, deleteUserData } from './user/index.js';
+export { sendMessage, getChatHistory, streamResponse } from "./chat/index.js";
+export { indexRepository, searchContext, updateRepositoryCache } from "./context/index.js";
+export { addContextSource, removeContextSource, getSystemStats } from "./admin/index.js";
+export { createUserProfile, deleteUserData } from "./user/index.js";

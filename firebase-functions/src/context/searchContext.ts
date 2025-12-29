@@ -4,7 +4,7 @@
  * Performs semantic search over indexed content chunks
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 interface SearchContextData {
   query: string;
@@ -16,13 +16,13 @@ export const searchContext = onCall<SearchContextData>(
   async (request) => {
     // Authentication check
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be authenticated');
+      throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
-    const { query, maxResults = 10, minSimilarity = 0.7 } = request.data;
+    const { query } = request.data;
 
     if (!query) {
-      throw new HttpsError('invalid-argument', 'query is required');
+      throw new HttpsError("invalid-argument", "query is required");
     }
 
     // TODO: Generate query embedding

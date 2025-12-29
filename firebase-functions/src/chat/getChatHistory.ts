@@ -4,8 +4,7 @@
  * Retrieves conversation history for a specific chat
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 interface GetChatHistoryData {
   chatId: string;
@@ -16,14 +15,13 @@ export const getChatHistory = onCall<GetChatHistoryData>(
   async (request) => {
     // Authentication check
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be authenticated');
+      throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
-    const userId = request.auth.uid;
-    const { chatId, limit = 50 } = request.data;
+    const { chatId } = request.data;
 
     if (!chatId) {
-      throw new HttpsError('invalid-argument', 'chatId is required');
+      throw new HttpsError("invalid-argument", "chatId is required");
     }
 
     // TODO: Implement chat history retrieval from Firestore

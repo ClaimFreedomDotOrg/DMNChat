@@ -4,15 +4,23 @@
  * Handles user messages and generates AI responses with RAG context
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { defineSecret } from 'firebase-functions/params';
-import * as admin from 'firebase-admin';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+// import { genkit } from "genkit";
+// import { googleAI, gemini15Flash } from "@genkit-ai/googleai";
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 interface SendMessageData {
   chatId: string;
   message: string;
+}
+
+interface Citation {
+  repoName: string;
+  filePath: string;
+  url: string;
 }
 
 export const sendMessage = onCall<SendMessageData>(
@@ -20,7 +28,7 @@ export const sendMessage = onCall<SendMessageData>(
   async (request) => {
     // Authentication check
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be authenticated to send messages');
+      throw new HttpsError("unauthenticated", "Must be authenticated to send messages");
     }
 
     const userId = request.auth.uid;
@@ -28,22 +36,87 @@ export const sendMessage = onCall<SendMessageData>(
 
     // Input validation
     if (!chatId || !message) {
-      throw new HttpsError('invalid-argument', 'chatId and message are required');
+      throw new HttpsError("invalid-argument", "chatId and message are required");
     }
 
     if (message.length > 10000) {
-      throw new HttpsError('invalid-argument', 'Message too long (max 10,000 characters)');
+      throw new HttpsError("invalid-argument", "Message too long (max 10,000 characters)");
     }
 
-    // TODO: Implement rate limiting
-    // TODO: Implement RAG context retrieval
-    // TODO: Implement Gemini API call
-    // TODO: Save messages to Firestore
+    try {
+      const db = getFirestore();
 
-    return {
-      messageId: 'temp-id',
-      responseText: 'Response generation not yet implemented',
-      citations: []
-    };
+      // Save user message
+      await db
+        .collection("users")
+        .doc(userId)
+        .collection("chats")
+        .doc(chatId)
+        .collection("messages")
+        .add({
+          role: "user",
+          text: message,
+          timestamp: FieldValue.serverTimestamp()
+        });
+
+      // TODO: Implement RAG context retrieval from chunks collection
+      // For now, use a simple prompt without context
+
+      const systemPrompt = `You are DMN (The Daemon), a guide for the Neuro-Gnostic framework from claimfreedom.org.
+You help users understand their true nature beyond mental conditioning.
+Be precise, compassionate, and direct.`;
+
+      // Dynamically import Genkit to avoid cold start / deployment timeout issues
+      const { genkit } = await import("genkit");
+      const { googleAI, gemini15Flash } = await import("@genkit-ai/googleai");
+
+      // Initialize Genkit with Google AI plugin using the secret
+      const ai = genkit({
+        plugins: [googleAI({ apiKey: geminiApiKey.value() })],
+        model: gemini15Flash,
+      });
+
+      // Generate AI response using Genkit
+      const { text } = await ai.generate({
+        prompt: `${systemPrompt}\n\nUser: ${message}\n\nDMN:`,
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        }
+      });
+
+      // Save AI response
+      const aiMessageRef = await db
+        .collection("users")
+        .doc(userId)
+        .collection("chats")
+        .doc(chatId)
+        .collection("messages")
+        .add({
+          role: "model",
+          text: text,
+          timestamp: FieldValue.serverTimestamp()
+        });
+
+      // Update chat metadata
+      await db
+        .collection("users")
+        .doc(userId)
+        .collection("chats")
+        .doc(chatId)
+        .set({
+          updatedAt: FieldValue.serverTimestamp(),
+          lastMessage: text.substring(0, 100)
+        }, { merge: true });
+
+      return {
+        messageId: aiMessageRef.id,
+        responseText: text,
+        citations: [] as Citation[]
+      };
+    } catch (error) {
+      console.error("Error in sendMessage:", error);
+      throw new HttpsError("internal", "Failed to generate response");
+    }
   }
 );

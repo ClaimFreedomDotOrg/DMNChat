@@ -4,13 +4,13 @@
  * Returns system statistics for admin dashboard
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 export const getSystemStats = onCall(
   async (request) => {
     // Admin check
     if (!request.auth || !request.auth.token.admin) {
-      throw new HttpsError('permission-denied', 'Admin access required');
+      throw new HttpsError("permission-denied", "Admin access required");
     }
 
     // TODO: Gather statistics from Firestore
