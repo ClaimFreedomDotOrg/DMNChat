@@ -200,6 +200,20 @@ export const indexRepository = onCall<IndexRepositoryData>(
 
       logger.info("Starting repository indexing", { sourceId, repoUrl, branch });
 
+      // Clear existing chunks for this source (if re-indexing)
+      logger.info("Clearing old chunks for source", { sourceId });
+      const oldChunksQuery = db.collection("chunks").where("sourceId", "==", sourceId);
+      const oldChunksSnapshot = await oldChunksQuery.get();
+
+      if (!oldChunksSnapshot.empty) {
+        const deleteBatch = db.batch();
+        oldChunksSnapshot.docs.forEach(doc => {
+          deleteBatch.delete(doc.ref);
+        });
+        await deleteBatch.commit();
+        logger.info(`Deleted ${oldChunksSnapshot.size} old chunks`);
+      }
+
       // Parse GitHub URL
       const parsed = parseGitHubUrl(repoUrl);
       if (!parsed) {
@@ -212,6 +226,8 @@ export const indexRepository = onCall<IndexRepositoryData>(
       const token = githubToken.value();
       const allFiles = await fetchGitHubTree(owner, repo, branch, token);
 
+      logger.info(`Fetched ${allFiles.length} files from GitHub tree`);
+
       await sourceRef.update({
         "status.progress": 10
       });
@@ -219,6 +235,13 @@ export const indexRepository = onCall<IndexRepositoryData>(
       // Filter relevant files
       const relevantFiles = filterFiles(allFiles);
       logger.info(`Found ${relevantFiles.length} relevant files out of ${allFiles.length} total`);
+
+      // Log first few file paths for debugging
+      if (relevantFiles.length > 0) {
+        logger.info("Sample relevant files:", relevantFiles.slice(0, 5).map(f => f.path));
+      } else {
+        logger.warn("No relevant files found. Sample of all files:", allFiles.slice(0, 10).map(f => ({ path: f.path, type: f.type, size: f.size })));
+      }
 
       if (relevantFiles.length === 0) {
         throw new Error("No relevant files found in repository");

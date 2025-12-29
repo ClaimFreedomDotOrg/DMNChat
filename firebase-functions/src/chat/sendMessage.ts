@@ -152,6 +152,24 @@ export const sendMessage = onCall<SendMessageData>(
           timestamp: FieldValue.serverTimestamp()
         });
 
+      // Retrieve conversation history (last 10 messages)
+      const historySnapshot = await chatRef
+        .collection("messages")
+        .orderBy("timestamp", "desc")
+        .limit(11) // Get last 11 (including the one we just added)
+        .get();
+
+      // Convert to array and reverse to get chronological order
+      const historyMessages = historySnapshot.docs
+        .map(doc => ({
+          role: doc.data().role,
+          text: doc.data().text
+        }))
+        .reverse()
+        .slice(0, -1); // Remove the last one (the message we just added)
+
+      logger.info(`Retrieved ${historyMessages.length} previous messages for context`);
+
       // Retrieve relevant context chunks
       const contextChunks = await retrieveContext(db, message);
 
@@ -278,6 +296,11 @@ Now, respond to the user's message with precision, compassion, and the clarity o
         ? `\n\n# LOADED KNOWLEDGE BASE\n\nThe following excerpts from the Neuro-Gnostic framework documentation are relevant to the user's question. Use this knowledge to provide accurate, grounded responses. Cite sources naturally when appropriate.\n\n${contextChunks.map((chunk, i) => `\n---\nSOURCE ${i + 1}: ${chunk.repoName}/${chunk.filePath}\n---\n${chunk.content}\n`).join("\n")}\n\n---\n`
         : "";
 
+      // Build conversation history section
+      const historySection = historyMessages.length > 0
+        ? `\n\n# CONVERSATION HISTORY\n\nThe following is the recent conversation history. Use this context to provide coherent, contextually relevant responses that build on previous exchanges.\n\n${historyMessages.map(msg => `${msg.role === "user" ? "User" : "DMN"}: ${msg.text}`).join("\n\n")}\n\n---\n`
+        : "";
+
       // Check if API key is available
       const apiKey = geminiApiKey.value();
       if (!apiKey) {
@@ -296,7 +319,7 @@ Now, respond to the user's message with precision, compassion, and the clarity o
       // Generate AI response with context
       const { text } = await ai.generate({
         model: googleAI.model("gemini-2.5-flash"),
-        prompt: `${systemPrompt}${contextSection}\n\nUser: ${message}\n\nDMN:`,
+        prompt: `${systemPrompt}${contextSection}${historySection}\n\nUser: ${message}\n\nDMN:`,
         config: {
           temperature: 0.7,
           maxOutputTokens: 2000,
