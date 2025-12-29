@@ -25,7 +25,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const isAdmin = userProfile?.role === 'admin';
 
   return (
-    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10 pt-12 sm:pt-4" style={{ paddingTop: 'max(3rem, env(safe-area-inset-top))' }}>
+    <header className="min-h-[6rem] sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10 pt-12 sm:pt-0">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {user && (
           <button
