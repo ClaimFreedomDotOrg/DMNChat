@@ -104,6 +104,17 @@ function filterFiles(files: GitHubFile[]): GitHubFile[] {
 }
 
 /**
+ * Get download URL for a file (construct if missing from API response)
+ */
+function getDownloadUrl(file: GitHubFile, owner: string, repo: string, branch: string): string {
+  if (file.download_url) {
+    return file.download_url;
+  }
+  // Construct raw GitHub URL when download_url is missing
+  return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`;
+}
+
+/**
  * Download file content from GitHub
  */
 async function downloadFileContent(url: string, token?: string): Promise<string> {
@@ -263,7 +274,8 @@ export const indexRepository = onCall<IndexRepositoryData>(
         const fileContents = await Promise.all(
           batch.map(async (file) => {
             try {
-              const content = await downloadFileContent(file.download_url, token);
+              const downloadUrl = getDownloadUrl(file, owner, repo, branch);
+              const content = await downloadFileContent(downloadUrl, token);
               const chunks = chunkContent(content);
               logger.info(`File ${file.path}: ${content.length} bytes, ${chunks.length} chunks`);
               return { file, chunks };
