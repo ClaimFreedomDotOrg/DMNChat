@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Users, MessageSquare, Activity } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { getSystemStats } from '@/services/adminService';
 
 interface SystemStats {
   totalUsers: number;
@@ -18,6 +17,8 @@ const OverviewPanel: React.FC = () => {
     activeChats: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cacheInfo, setCacheInfo] = useState<{ cached: boolean; age?: number } | null>(null);
 
   useEffect(() => {
     loadStats();
@@ -26,36 +27,26 @@ const OverviewPanel: React.FC = () => {
   const loadStats = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // Get total users
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const totalUsers = usersSnapshot.size;
-
-      // Get total repositories
-      const reposSnapshot = await getDocs(collection(db, 'contextSources'));
-      const totalRepositories = reposSnapshot.size;
-
-      // Get total chunks
-      const chunksSnapshot = await getDocs(collection(db, 'chunks'));
-      const totalChunks = chunksSnapshot.size;
-
-      // Get active chats (simplified - counts all chats)
-      let activeChats = 0;
-      for (const userDoc of usersSnapshot.docs) {
-        const chatsSnapshot = await getDocs(
-          collection(db, 'users', userDoc.id, 'chats')
-        );
-        activeChats += chatsSnapshot.size;
-      }
+      // Call Cloud Function to get stats
+      const data = await getSystemStats();
 
       setStats({
-        totalUsers,
-        totalRepositories,
-        totalChunks,
-        activeChats,
+        totalUsers: data.totalUsers,
+        totalRepositories: data.totalSources,
+        totalChunks: data.totalChunks,
+        activeChats: data.totalChats,
+      });
+
+      // Store cache info for display
+      setCacheInfo({
+        cached: (data as any).cached || false,
+        age: (data as any).cacheAge
       });
     } catch (error) {
       console.error('Error loading stats:', error);
+      setError('Failed to load statistics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -96,12 +87,32 @@ const OverviewPanel: React.FC = () => {
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold text-slate-200 mb-2">System Overview</h2>
-        <p className="text-slate-400">Monitor system health and usage statistics</p>
+        <div className="flex items-center justify-between">
+          <p className="text-slate-400">Monitor system health and usage statistics</p>
+          {cacheInfo && cacheInfo.cached && cacheInfo.age !== undefined && (
+            <p className="text-sm text-slate-500">
+              Cached • Updated {Math.floor(cacheInfo.age / 60)}m {cacheInfo.age % 60}s ago
+            </p>
+          )}
+          {cacheInfo && !cacheInfo.cached && (
+            <p className="text-sm text-emerald-500">• Live data</p>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-6">
+          <p className="text-red-400">{error}</p>
+          <button
+            onClick={loadStats}
+            className="mt-4 px-4 py-2 bg-red-900/30 hover:bg-red-900/40 text-red-300 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -133,10 +144,17 @@ const OverviewPanel: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button
             onClick={loadStats}
-            className="p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-sky-600 transition-colors text-left"
+            disabled={loading}
+            className="p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-sky-600 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <h4 className="font-medium text-slate-200 mb-1">Refresh Statistics</h4>
-            <p className="text-sm text-slate-500">Update all dashboard metrics</p>
+            <h4 className="font-medium text-slate-200 mb-1">
+              {loading ? 'Refreshing...' : 'Refresh Statistics'}
+            </h4>
+            <p className="text-sm text-slate-500">
+              {cacheInfo?.cached
+                ? 'Stats are cached for 1 hour (click to force refresh)'
+                : 'Update all dashboard metrics'}
+            </p>
           </button>
           <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
             <h4 className="font-medium text-slate-200 mb-1">System Status</h4>

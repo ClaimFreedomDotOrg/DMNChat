@@ -285,6 +285,27 @@ export const getSystemConfig = async (): Promise<SystemConfig> => {
 };
 
 /**
+ * Get system statistics (admin only)
+ */
+export const getSystemStats = async (): Promise<{
+  totalUsers: number;
+  totalChats: number;
+  totalMessages: number;
+  totalSources: number;
+  totalChunks: number;
+  indexingStatus: any[];
+}> => {
+  try {
+    const getStatsFn = httpsCallable(functions, 'getSystemStats');
+    const result = await getStatsFn();
+    return result.data as any;
+  } catch (error) {
+    console.error('Error getting system stats:', error);
+    throw error;
+  }
+};
+
+/**
  * Update the system configuration directly in Firestore
  */
 export const updateSystemConfigService = async (

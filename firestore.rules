@@ -54,5 +54,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
+
+    // System statistics cache (read by admins, write by backend functions)
+    match /systemStats/{doc} {
+      allow read: if isAdmin();
+      allow write: if false; // Only backend functions can write
+    }
   }
 }
