@@ -7,8 +7,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-// import { genkit } from "genkit";
-// import { googleAI, gemini15Flash } from "@genkit-ai/googleai";
+import { genkit } from "genkit";
+import { googleAI } from "@genkit-ai/google-genai";
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
@@ -203,10 +203,6 @@ Now, respond to the user's message with precision, compassion, and the clarity o
         throw new Error("GEMINI_API_KEY secret not configured");
       }
 
-      // Use Firebase AI (Vertex AI) with Genkit
-      const { genkit } = await import("genkit");
-      const { googleAI } = await import("@genkit-ai/googleai");
-
       // Initialize Genkit with Google AI plugin
       const ai = genkit({
         plugins: [googleAI({ apiKey })],
@@ -214,7 +210,7 @@ Now, respond to the user's message with precision, compassion, and the clarity o
 
       // Generate AI response - use working model name
       const { text } = await ai.generate({
-        model: "googleai/gemini-2.5-flash-001",
+        model: googleAI.model("gemini-2.5-flash"),
         prompt: `${systemPrompt}\n\nUser: ${message}\n\nDMN:`,
         config: {
           temperature: 0.7,
