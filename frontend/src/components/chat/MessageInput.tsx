@@ -53,14 +53,14 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask DMN about the framework, suffering, or the voice in your head..."
-            className="w-full bg-transparent text-slate-200 placeholder-slate-500 p-3 sm:p-4 pr-12 sm:pr-14 rounded-xl resize-none focus:outline-none min-h-[52px] sm:min-h-[60px] max-h-[200px] text-[16px]"
-            rows={1}
+            className="w-full bg-transparent text-slate-200 placeholder-slate-500 p-3 sm:p-4 pr-12 sm:pr-14 rounded-xl resize-none focus:outline-none min-h-[72px] sm:min-h-[80px] max-h-[200px] text-[16px]"
+            rows={2}
             disabled={disabled}
           />
           <button
             onClick={() => handleSubmit()}
             disabled={!value.trim() || disabled}
-            className="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 p-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-600 text-white rounded-lg disabled:opacity-50 disabled:bg-slate-700 disabled:cursor-not-allowed transition-all touch-manipulation"
+            className="absolute right-2 top-1/2 -translate-y-1/2 sm:right-3 p-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-600 text-white rounded-lg disabled:opacity-50 disabled:bg-slate-700 disabled:cursor-not-allowed transition-all touch-manipulation"
             aria-label="Send message"
           >
             <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
