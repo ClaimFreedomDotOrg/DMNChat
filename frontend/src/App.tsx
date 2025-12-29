@@ -2,23 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import ChatMessage from './components/chat/ChatMessage';
 import MessageInput from './components/chat/MessageInput';
 import ChatHeader from './components/chat/ChatHeader';
-import RepoManager from './components/admin/RepoManager';
+import ChatHistorySidebar from './components/chat/ChatHistorySidebar';
+import AdminDashboard from './components/admin/AdminDashboard';
 import AuthModal from './components/auth/AuthModal';
 import { Repository } from './types';
 import { useChat } from './hooks/useChat';
 import { useAuth } from './hooks/useAuth';
 import { signOut } from './services/authService';
+import { subscribeToContextSources } from './services/adminService';
 import { X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [repos, setRepos] = useState<Repository[]>([]);
   const [input, setInput] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
+  const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { user, loading: authLoading } = useAuth();
-  const { messages, isTyping, error, sendMessage, clearError } = useChat();
+  const { user, profile, loading: authLoading } = useAuth();
+  const { messages, isTyping, error, sendMessage, clearError } = useChat(currentChatId || undefined);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,12 +32,15 @@ const App: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Handle responsive sidebar default
+  // Subscribe to context sources
   useEffect(() => {
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
+    if (user) {
+      const unsubscribe = subscribeToContextSources((updatedRepos) => {
+        setRepos(updatedRepos);
+      });
+      return () => unsubscribe();
     }
-  }, []);
+  }, [user]);
 
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || isTyping) return;
@@ -49,6 +56,15 @@ const App: React.FC = () => {
     }
   };
 
+  const handleNewChat = () => {
+    setCurrentChatId(null);
+    setHistorySidebarOpen(false);
+  };
+
+  const handleSelectChat = (chatId: string) => {
+    setCurrentChatId(chatId);
+  };
+
   return (
     <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
       {/* Auth Modal */}
@@ -57,27 +73,31 @@ const App: React.FC = () => {
         onClose={() => setAuthModalOpen(false)}
       />
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Admin Dashboard */}
+      <AdminDashboard
+        isOpen={adminDashboardOpen}
+        onClose={() => setAdminDashboardOpen(false)}
+      />
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-80 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <RepoManager repos={repos} setRepos={setRepos} />
-      </div>
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar
+        isOpen={historySidebarOpen}
+        onClose={() => setHistorySidebarOpen(false)}
+        currentChatId={currentChatId}
+        onSelectChat={handleSelectChat}
+        onNewChat={handleNewChat}
+      />
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${sidebarOpen ? 'ml-80' : 'ml-0'}`}>
+      <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${historySidebarOpen ? 'ml-80' : 'ml-0'}`}>
         <ChatHeader
           repoCount={repos.length}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           user={user}
+          userProfile={profile}
           onSignIn={() => setAuthModalOpen(true)}
           onSignOut={handleSignOut}
+          onOpenAdmin={() => setAdminDashboardOpen(true)}
+          onToggleHistory={() => setHistorySidebarOpen(!historySidebarOpen)}
         />
 
         {/* Error Display */}

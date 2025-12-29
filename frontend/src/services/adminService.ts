@@ -200,3 +200,19 @@ export const reindexRepository = async (sourceId: string): Promise<void> => {
     throw error;
   }
 };
+
+/**
+ * Update a user's role (admin only)
+ */
+export const updateUserRole = async (
+  userId: string,
+  role: 'user' | 'admin'
+): Promise<void> => {
+  try {
+    const updateRoleFn = httpsCallable(functions, 'updateUserRole');
+    await updateRoleFn({ userId, role });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
+  }
+};

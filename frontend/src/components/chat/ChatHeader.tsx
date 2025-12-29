@@ -1,32 +1,42 @@
 import React from 'react';
-import { Menu, Sparkles, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { Settings, Sparkles, LogIn, LogOut, User as UserIcon, Menu } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { UserProfile } from '@/types';
 
 interface ChatHeaderProps {
   repoCount: number;
-  onToggleSidebar: () => void;
   user: User | null;
+  userProfile: UserProfile | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onOpenAdmin: () => void;
+  onToggleHistory: () => void;
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
   repoCount,
-  onToggleSidebar,
   user,
+  userProfile,
   onSignIn,
-  onSignOut
+  onSignOut,
+  onOpenAdmin,
+  onToggleHistory
 }) => {
+  const isAdmin = userProfile?.role === 'admin';
+
   return (
     <header className="h-16 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10">
       <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleSidebar}
-          className="p-2 hover:bg-slate-800 rounded-md text-slate-400 transition-colors"
-          aria-label="Toggle sidebar"
-        >
-          <Menu size={20} />
-        </button>
+        {user && (
+          <button
+            onClick={onToggleHistory}
+            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 transition-colors"
+            aria-label="Toggle chat history"
+            title="Toggle chat history"
+          >
+            <Menu size={20} />
+          </button>
+        )}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-900/20">
             <Sparkles className="w-5 h-5 text-white" />
@@ -47,9 +57,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {/* Auth button */}
         {user ? (
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors"
+                title="Open Admin Dashboard"
+              >
+                <Settings size={16} />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+            )}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
               <UserIcon size={14} className="text-slate-400" />
               <span className="text-xs text-slate-300">{user.email}</span>
+              {isAdmin && (
+                <span className="ml-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] rounded">
+                  ADMIN
+                </span>
+              )}
             </div>
             <button
               onClick={onSignOut}
