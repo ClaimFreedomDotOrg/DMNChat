@@ -20,8 +20,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* Prevent pull-to-refresh on mobile */
   overscroll-behavior: none;
-  /* Ensure proper safe area handling on iOS */
-  padding-top: env(safe-area-inset-top);
 }
 
 #root {
