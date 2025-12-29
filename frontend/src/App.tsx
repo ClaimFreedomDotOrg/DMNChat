@@ -28,9 +28,10 @@ const ChatView: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const { messages, isTyping, error, chatId: activeChatId, sendMessage, clearError, resetChat } = useChat(chatId);
 
-  // Update URL when chatId changes
+  // Update URL when a NEW chat is created (activeChatId goes from null to a value)
   useEffect(() => {
-    if (activeChatId && activeChatId !== chatId) {
+    // Only update URL if we created a new chat (had no chatId in URL, but now have one)
+    if (activeChatId && !chatId) {
       navigate(`/chat/${activeChatId}`, { replace: true });
     }
   }, [activeChatId, chatId, navigate]);

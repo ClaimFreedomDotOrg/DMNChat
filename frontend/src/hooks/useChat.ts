@@ -27,17 +27,21 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(initialChatId || null);
+  const [loadedChatId, setLoadedChatId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load chat if initialChatId is provided, or reset for new chat
   useEffect(() => {
+    // Prevent duplicate loads
+    if (isLoading) return;
+
     if (initialChatId && user) {
-      // Only load if we don't already have this chat loaded locally
-      // (e.g., we just created it and navigated here)
-      if (initialChatId !== chatId) {
+      // Only load if this is a different chat than what we have loaded
+      if (initialChatId !== loadedChatId) {
         loadChat(initialChatId);
       }
-    } else if (!initialChatId) {
-      // Reset to welcome message for new chat
+    } else if (!initialChatId && loadedChatId !== null) {
+      // Reset to welcome message for new chat (only if we had a chat loaded before)
       setMessages([{
         id: 'welcome',
         role: 'model',
@@ -45,22 +49,27 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         timestamp: Date.now()
       }]);
       setChatId(null);
+      setLoadedChatId(null);
       setError(null);
     }
   }, [initialChatId, user]);
 
   const loadChat = async (id: string) => {
-    if (!user) return;
+    if (!user || isLoading) return;
 
+    setIsLoading(true);
     try {
       const chat = await getChat(user.uid, id);
       if (chat) {
         setMessages(chat.messages);
         setChatId(id);
+        setLoadedChatId(id);
       }
     } catch (err) {
       console.error('Error loading chat:', err);
       setError('Failed to load chat');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -96,6 +105,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         const title = generateChatTitle(text);
         currentChatId = await createChat(user.uid, title);
         setChatId(currentChatId);
+        setLoadedChatId(currentChatId); // Mark as loaded so we don't re-fetch
       }
 
       // Save user message to Firestore
@@ -179,6 +189,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       timestamp: Date.now()
     }]);
     setChatId(null);
+    setLoadedChatId(null);
     setError(null);
   }, []);
 
