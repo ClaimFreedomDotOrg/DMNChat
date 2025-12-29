@@ -11,6 +11,7 @@ interface UseChatReturn {
   chatId: string | null;
   sendMessage: (text: string) => Promise<void>;
   clearError: () => void;
+  resetChat: () => void;
 }
 
 export const useChat = (initialChatId?: string): UseChatReturn => {
@@ -170,12 +171,24 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     setError(null);
   }, []);
 
+  const resetChat = useCallback(() => {
+    setMessages([{
+      id: 'welcome',
+      role: 'model',
+      text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Let us begin the work of Anamnesis.",
+      timestamp: Date.now()
+    }]);
+    setChatId(null);
+    setError(null);
+  }, []);
+
   return {
     messages,
     isTyping,
     error,
     chatId,
     sendMessage,
-    clearError
+    clearError,
+    resetChat
   };
 };

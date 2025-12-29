@@ -26,7 +26,7 @@ const ChatView: React.FC = () => {
   const messageInputRef = useRef<{ focus: () => void }>(null);
 
   const { user, profile, loading: authLoading } = useAuth();
-  const { messages, isTyping, error, chatId: activeChatId, sendMessage, clearError } = useChat(chatId);
+  const { messages, isTyping, error, chatId: activeChatId, sendMessage, clearError, resetChat } = useChat(chatId);
 
   // Update URL when chatId changes
   useEffect(() => {
@@ -73,6 +73,7 @@ const ChatView: React.FC = () => {
   };
 
   const handleNewChat = () => {
+    resetChat();
     navigate('/');
     setHistorySidebarOpen(false);
   };
