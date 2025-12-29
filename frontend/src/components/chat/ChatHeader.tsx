@@ -1,12 +1,22 @@
 import React from 'react';
-import { Menu, Sparkles } from 'lucide-react';
+import { Menu, Sparkles, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { User } from 'firebase/auth';
 
 interface ChatHeaderProps {
   repoCount: number;
   onToggleSidebar: () => void;
+  user: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ repoCount, onToggleSidebar }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({
+  repoCount,
+  onToggleSidebar,
+  user,
+  onSignIn,
+  onSignOut
+}) => {
   return (
     <header className="h-16 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10">
       <div className="flex items-center gap-3">
@@ -27,10 +37,37 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ repoCount, onToggleSidebar }) =
         </div>
       </div>
 
-      <div className="text-xs text-slate-500 font-mono hidden sm:block">
-        {repoCount > 0
-          ? `${repoCount} Knowledge Base${repoCount > 1 ? 's' : ''} Loaded`
-          : 'No Context Loaded'}
+      <div className="flex items-center gap-4">
+        <div className="text-xs text-slate-500 font-mono hidden sm:block">
+          {repoCount > 0
+            ? `${repoCount} Knowledge Base${repoCount > 1 ? 's' : ''} Loaded`
+            : 'No Context Loaded'}
+        </div>
+
+        {/* Auth button */}
+        {user ? (
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
+              <UserIcon size={14} className="text-slate-400" />
+              <span className="text-xs text-slate-300">{user.email}</span>
+            </div>
+            <button
+              onClick={onSignOut}
+              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 hover:text-red-400 transition-colors"
+              title="Sign out"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onSignIn}
+            className="flex items-center gap-2 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <LogIn size={16} />
+            <span className="hidden sm:inline">Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

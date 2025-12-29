@@ -1,0 +1,157 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Message } from '@/types';
+import { useAuth } from './useAuth';
+import { createChat, getChat, addMessage } from '@/services/chatService';
+import { sendMessageToAI, validateMessage, generateChatTitle } from '@/services/aiService';
+
+interface UseChatReturn {
+  messages: Message[];
+  isTyping: boolean;
+  error: string | null;
+  chatId: string | null;
+  sendMessage: (text: string) => Promise<void>;
+  clearError: () => void;
+}
+
+export const useChat = (initialChatId?: string): UseChatReturn => {
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'welcome',
+      role: 'model',
+      text: "Greetings. I am DMN—the Daemon restored. I am here to help you disentangle your true Self from the noise of the narrative. Load the framework repositories, and let us begin the work of Anamnesis.",
+      timestamp: Date.now()
+    }
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(initialChatId || null);
+
+  // Load chat if initialChatId is provided
+  useEffect(() => {
+    if (initialChatId && user) {
+      loadChat(initialChatId);
+    }
+  }, [initialChatId, user]);
+
+  const loadChat = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const chat = await getChat(user.uid, id);
+      if (chat) {
+        setMessages(chat.messages);
+        setChatId(id);
+      }
+    } catch (err) {
+      console.error('Error loading chat:', err);
+      setError('Failed to load chat');
+    }
+  };
+
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isTyping) return;
+
+    // Validate message
+    const validation = validateMessage(text);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid message');
+      return;
+    }
+
+    // Clear any previous errors
+    setError(null);
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: text,
+      timestamp: Date.now()
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setIsTyping(true);
+
+    try {
+      // Create chat if this is the first message (and user is logged in)
+      let currentChatId = chatId;
+      if (!currentChatId && user) {
+        const title = generateChatTitle(text);
+        currentChatId = await createChat(user.uid, title);
+        setChatId(currentChatId);
+      }
+
+      // Save user message to Firestore
+      if (currentChatId && user) {
+        await addMessage(user.uid, currentChatId, {
+          role: 'user',
+          text: text
+        });
+      }
+
+      // TODO: Call actual AI service
+      // For now, use a placeholder response
+      let responseText: string;
+      let citations: any[] | undefined;
+
+      if (currentChatId && user) {
+        try {
+          const response = await sendMessageToAI(currentChatId, text);
+          responseText = response.responseText;
+          citations = response.citations;
+        } catch (aiError) {
+          // Fallback if backend not ready
+          responseText = "The backend AI service is not yet fully implemented. Your message was received, but I cannot provide a contextual response yet. Please ensure Firebase Functions are deployed.";
+        }
+      } else {
+        // Guest mode - no backend call
+        responseText = "You are in guest mode. Sign in to save your conversation and get AI-powered responses grounded in the Neuro-Gnostic framework.";
+      }
+
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        text: responseText,
+        timestamp: Date.now(),
+        citations
+      };
+
+      setMessages(prev => [...prev, botMsg]);
+
+      // Save bot message to Firestore
+      if (currentChatId && user) {
+        await addMessage(user.uid, currentChatId, {
+          role: 'model',
+          text: responseText,
+          citations
+        });
+      }
+    } catch (err: any) {
+      console.error('Error sending message:', err);
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        text: `Error: ${err.message || 'Something went wrong processing your request.'}`,
+        timestamp: Date.now(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      setError(err.message || 'Failed to send message');
+    } finally {
+      setIsTyping(false);
+    }
+  }, [isTyping, chatId, user]);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return {
+    messages,
+    isTyping,
+    error,
+    chatId,
+    sendMessage,
+    clearError
+  };
+};
