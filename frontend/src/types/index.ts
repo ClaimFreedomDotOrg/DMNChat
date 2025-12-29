@@ -48,6 +48,19 @@ export interface UserProfile {
     language: string;
   };
   role: 'user' | 'admin';
+  memberLevel: string; // Member tier (e.g., 'free', 'seeker', 'awakened')
+  messageUsage?: {
+    count: number; // Messages sent today
+    resetAt: number; // Timestamp when count resets (start of next day)
+  };
+}
+
+// Member Level Configuration
+export interface MemberLevel {
+  name: string; // Unique identifier (e.g., 'free', 'seeker', 'awakened', 'illuminated')
+  displayName: string; // Human-readable name (e.g., 'Free Seeker', 'Awakened Soul')
+  messagesPerDay: number; // Daily message limit (-1 for unlimited)
+  description?: string; // Optional description of the tier
 }
 
 // System Configuration types
@@ -64,6 +77,8 @@ export interface SystemConfig {
     minSimilarity: number;
   };
   systemPrompt: string;
+  memberLevels: MemberLevel[]; // Configurable member tiers
+  defaultMemberLevel: string; // Name of the default level for new users
 }
 
 // API Response types

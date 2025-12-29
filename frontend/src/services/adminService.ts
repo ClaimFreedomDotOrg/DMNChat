@@ -221,6 +221,29 @@ export const updateUserRole = async (
 };
 
 /**
+ * Update a user's member level (admin only)
+ * Updates the member level directly in Firestore
+ */
+export const updateUserMemberLevel = async (
+  userId: string,
+  memberLevel: string
+): Promise<void> => {
+  try {
+    const { updateDoc } = await import('firebase/firestore');
+    const userRef = doc(db, 'users', userId);
+
+    await updateDoc(userRef, {
+      memberLevel: memberLevel,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating user member level:', error);
+    throw error;
+  }
+};
+
+
+/**
  * Check if system configuration has been initialized
  */
 export const isSystemConfigInitialized = async (): Promise<boolean> => {
@@ -249,9 +272,11 @@ export const getSystemConfig = async (): Promise<SystemConfig> => {
 
     const data = configDoc.data();
     return {
-      ai: data?.ai || {},
-      rag: data?.rag || {},
-      systemPrompt: data?.systemPrompt || '',
+      ai: data?.ai || DEFAULT_SYSTEM_CONFIG.ai,
+      rag: data?.rag || DEFAULT_SYSTEM_CONFIG.rag,
+      systemPrompt: data?.systemPrompt || DEFAULT_SYSTEM_CONFIG.systemPrompt,
+      memberLevels: data?.memberLevels || DEFAULT_SYSTEM_CONFIG.memberLevels,
+      defaultMemberLevel: data?.defaultMemberLevel || DEFAULT_SYSTEM_CONFIG.defaultMemberLevel,
     } as SystemConfig;
   } catch (error) {
     console.error('Error getting system config:', error);
@@ -283,6 +308,8 @@ export const updateSystemConfigService = async (
         ...(config.rag || {}),
       },
       systemPrompt: config.systemPrompt ?? currentConfig.systemPrompt,
+      memberLevels: config.memberLevels ?? currentConfig.memberLevels,
+      defaultMemberLevel: config.defaultMemberLevel ?? currentConfig.defaultMemberLevel,
     };
 
     // Save to Firestore

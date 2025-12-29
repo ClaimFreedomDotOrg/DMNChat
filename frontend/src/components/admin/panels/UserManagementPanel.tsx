@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
-import { updateUserRole } from '@/services/adminService';
-import { UserProfile } from '@/types';
-import { Shield, User, Trash2, Mail, Calendar } from 'lucide-react';
+import { updateUserRole, updateUserMemberLevel, getSystemConfig } from '@/services/adminService';
+import { UserProfile, MemberLevel } from '@/types';
+import { Shield, User, Trash2, Mail, Calendar, Award, MessageSquare } from 'lucide-react';
 
 const UserManagementPanel: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [memberLevels, setMemberLevels] = useState<MemberLevel[]>([]);
 
   useEffect(() => {
     loadUsers();
+    loadMemberLevels();
   }, []);
+
+  const loadMemberLevels = async () => {
+    try {
+      const config = await getSystemConfig();
+      setMemberLevels(config.memberLevels);
+    } catch (err) {
+      console.error('Error loading member levels:', err);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -62,6 +73,20 @@ const UserManagementPanel: React.FC = () => {
     }
   };
 
+  const changeMemberLevel = async (userId: string, newLevel: string) => {
+    try {
+      await updateUserMemberLevel(userId, newLevel);
+
+      // Update local state
+      setUsers(users.map(user =>
+        user.uid === userId ? { ...user, memberLevel: newLevel } : user
+      ));
+    } catch (err) {
+      console.error('Error updating member level:', err);
+      setError('Failed to update member level');
+    }
+  };
+
   const deleteUser = async (userId: string, userEmail: string) => {
     if (!confirm(`Are you sure you want to delete user ${userEmail}? This action cannot be undone.`)) {
       return;
@@ -82,9 +107,22 @@ const UserManagementPanel: React.FC = () => {
     }
   };
 
-  const formatDate = (timestamp: number) => {
+  const formatDate = (timestamp: number | any) => {
     if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleDateString('en-US', {
+
+    // Handle Firestore Timestamp objects
+    let date: Date;
+    if (timestamp?.toDate) {
+      date = timestamp.toDate();
+    } else if (typeof timestamp === 'number') {
+      date = new Date(timestamp);
+    } else if (timestamp?.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      return 'N/A';
+    }
+
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -198,6 +236,31 @@ const UserManagementPanel: React.FC = () => {
                         <span className="text-sm text-slate-400">{user.displayName}</span>
                       </div>
                     )}
+
+                    {/* Member Level */}
+                    <div className="flex items-center gap-2">
+                      <Award size={16} className="text-slate-500" />
+                      <span className="text-sm text-slate-400">Member Level:</span>
+                      <select
+                        value={user.memberLevel || 'free'}
+                        onChange={(e) => changeMemberLevel(user.uid, e.target.value)}
+                        className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded hover:border-slate-600 focus:outline-none focus:border-sky-500 transition-colors"
+                      >
+                        {memberLevels.map(level => (
+                          <option key={level.name} value={level.name}>
+                            {level.displayName} ({level.messagesPerDay === -1 ? 'Unlimited' : `${level.messagesPerDay}/day`})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Message Usage */}
+                    <div className="flex items-center gap-2">
+                      <MessageSquare size={16} className="text-slate-500" />
+                      <span className="text-sm text-slate-400">
+                        Messages today: {user.messageUsage?.count || 0}
+                      </span>
+                    </div>
 
                     {/* Created Date */}
                     <div className="flex items-center gap-2">

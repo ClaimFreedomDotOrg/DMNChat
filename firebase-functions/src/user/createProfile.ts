@@ -42,7 +42,12 @@ export const createUserProfile = onCall<CreateProfileData>(
         language: "en",
         notifications: true
       },
-      role: "user"
+      role: "user",
+      memberLevel: "free", // Default free tier
+      messageUsage: {
+        count: 0,
+        resetAt: getNextMidnight()
+      }
     });
 
     return {
@@ -51,3 +56,13 @@ export const createUserProfile = onCall<CreateProfileData>(
     };
   }
 );
+
+/**
+ * Get timestamp for next midnight UTC
+ */
+function getNextMidnight(): number {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  return tomorrow.getTime();
+}

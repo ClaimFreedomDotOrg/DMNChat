@@ -11,6 +11,14 @@ import { logger } from "firebase-functions/v2";
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
+// Member Level Configuration
+interface MemberLevel {
+  name: string;
+  displayName: string;
+  messagesPerDay: number;
+  description?: string;
+}
+
 // Type for system config stored in Firestore
 interface SystemConfig {
   ai: {
@@ -25,6 +33,8 @@ interface SystemConfig {
     minSimilarity: number;
   };
   systemPrompt: string;
+  memberLevels: MemberLevel[];
+  defaultMemberLevel: string;
 }
 
 interface SendMessageData {
@@ -59,13 +69,15 @@ async function loadSystemConfig(db: FirebaseFirestore.Firestore): Promise<System
     }
 
     const data = configDoc.data();
-    if (!data?.ai || !data?.rag || !data?.systemPrompt) {
+    if (!data?.ai || !data?.rag || !data?.systemPrompt || !data?.memberLevels || !data?.defaultMemberLevel) {
       logger.warn("System config incomplete, merging with defaults");
       const defaults = getDefaultConfig();
       return {
         ai: data?.ai || defaults.ai,
         rag: data?.rag || defaults.rag,
         systemPrompt: data?.systemPrompt || defaults.systemPrompt,
+        memberLevels: data?.memberLevels || defaults.memberLevels,
+        defaultMemberLevel: data?.defaultMemberLevel || defaults.defaultMemberLevel,
       };
     }
 
@@ -73,6 +85,8 @@ async function loadSystemConfig(db: FirebaseFirestore.Firestore): Promise<System
       ai: data.ai,
       rag: data.rag,
       systemPrompt: data.systemPrompt,
+      memberLevels: data.memberLevels,
+      defaultMemberLevel: data.defaultMemberLevel,
     };
   } catch (error) {
     logger.error("Error loading system config, using defaults:", error);
@@ -96,6 +110,33 @@ function getDefaultConfig(): SystemConfig {
       maxChunks: 5,
       minSimilarity: 0.7
     },
+    memberLevels: [
+      {
+        name: "free",
+        displayName: "Free Seeker",
+        messagesPerDay: 9,
+        description: "Begin your journey with 9 messages per day to explore the framework"
+      },
+      {
+        name: "seeker",
+        displayName: "Dedicated Seeker",
+        messagesPerDay: 30,
+        description: "Deepen your practice with 30 messages per day"
+      },
+      {
+        name: "awakened",
+        displayName: "Awakened Soul",
+        messagesPerDay: 100,
+        description: "Expanded access with 100 messages per day"
+      },
+      {
+        name: "illuminated",
+        displayName: "Illuminated One",
+        messagesPerDay: -1,
+        description: "Unlimited messages for those committed to the path"
+      }
+    ],
+    defaultMemberLevel: "free",
     systemPrompt: "You are DMN (The Daemon), an AI assistant helping users understand the Neuro-Gnostic framework. Provide clear, helpful responses based on the available context."
   };
 }
@@ -193,6 +234,73 @@ export const sendMessage = onCall<SendMessageData>(
     try {
       const db = getFirestore();
 
+      // Load system configuration to get member level limits
+      const systemConfig = await loadSystemConfig(db);
+
+      // Check message limits for user's member level
+      const userRef = db.collection("users").doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        throw new HttpsError("not-found", "User profile not found");
+      }
+
+      const userData = userDoc.data();
+      let memberLevel = userData?.memberLevel;
+
+      // If memberLevel is missing, set it to "free" and update the user document
+      if (!memberLevel) {
+        memberLevel = "free";
+        await userRef.update({
+          memberLevel: "free"
+        });
+        logger.info(`Set default member level "free" for user ${userId}`);
+      }
+
+      const messageUsage = userData?.messageUsage || { count: 0, resetAt: Date.now() };
+
+      // Find the member level configuration
+      const levelConfig = systemConfig.memberLevels.find(level => level.name === memberLevel);
+
+      if (!levelConfig) {
+        logger.warn(`Member level not found: ${memberLevel}, using default`);
+        // Use default level if current level not found
+        const defaultLevel = systemConfig.memberLevels.find(
+          level => level.name === systemConfig.defaultMemberLevel
+        );
+        if (!defaultLevel) {
+          throw new HttpsError("internal", "System configuration error: no valid member levels");
+        }
+      }
+
+      // Reset counter if it's a new day
+      const now = Date.now();
+      if (now >= messageUsage.resetAt) {
+        messageUsage.count = 0;
+        messageUsage.resetAt = getNextMidnight();
+      }
+
+      // Check if user has exceeded their daily limit
+      if (levelConfig && levelConfig.messagesPerDay !== -1) {
+        if (messageUsage.count >= levelConfig.messagesPerDay) {
+          throw new HttpsError(
+            "resource-exhausted",
+            `Daily message limit reached. Your ${levelConfig.displayName} tier allows ${levelConfig.messagesPerDay} messages per day. Limit resets at midnight UTC.`
+          );
+        }
+      }
+
+      // Increment message count
+      messageUsage.count += 1;
+
+      // Update user's message usage
+      await userRef.update({
+        messageUsage: {
+          count: messageUsage.count,
+          resetAt: messageUsage.resetAt
+        }
+      });
+
       // Verify chat exists or create it
       const chatRef = db
         .collection("users")
@@ -241,12 +349,10 @@ export const sendMessage = onCall<SendMessageData>(
 
       logger.info(`Retrieved ${historyMessages.length} previous messages for context`);
 
-      // Load system configuration from database
-      const systemConfig = await loadSystemConfig(db);
-      logger.info(`Using AI model: ${systemConfig.ai.model}, temperature: ${systemConfig.ai.temperature}`);
-
       // Retrieve relevant context chunks using config
       const contextChunks = await retrieveContext(db, message, systemConfig.rag.maxChunks);
+
+      logger.info(`Using AI model: ${systemConfig.ai.model}, temperature: ${systemConfig.ai.temperature}`);
 
       // Build context-aware prompt
       const contextSection = contextChunks.length > 0
@@ -333,3 +439,13 @@ export const sendMessage = onCall<SendMessageData>(
     }
   }
 );
+
+/**
+ * Get timestamp for next midnight UTC
+ */
+function getNextMidnight(): number {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  return tomorrow.getTime();
+}
