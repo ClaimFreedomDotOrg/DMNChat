@@ -26,8 +26,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         </div>
 
         {/* Message Content */}
-        <div className="flex-1 min-w-0">
-          <div className={`text-sm ${isError ? 'text-red-400' : 'text-slate-200'}`}>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className={`text-sm ${isError ? 'text-red-400' : 'text-slate-200'} break-words`}>
             <ReactMarkdown
               components={{
                 p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
