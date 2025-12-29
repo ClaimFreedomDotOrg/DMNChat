@@ -26,9 +26,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <header
-      className="flex-shrink-0 h-16 flex items-center justify-between px-3 sm:px-4 pt-8 sm:pt-0 pb-1 sm:pb-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10"
+      className="flex-shrink-0 h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur z-10"
       style={{
-        paddingTop: window.innerWidth < 640 ? 'max(2rem, env(safe-area-inset-top))' : undefined
+        paddingTop: 'env(safe-area-inset-top, 0px)'
       }}
     >
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">

@@ -25,7 +25,7 @@ body {
 #root {
   width: 100%;
   height: 100vh;
-  /* Don't use 100dvh on mobile - it causes the whole app to slide up with keyboard */
+  height: 100dvh; /* Dynamic viewport height - shrinks with keyboard */
 }
 
 /* Custom scrollbar styles */
