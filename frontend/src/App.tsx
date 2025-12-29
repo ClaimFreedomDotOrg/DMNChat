@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import ChatMessage from './components/chat/ChatMessage';
 import MessageInput from './components/chat/MessageInput';
 import ChatHeader from './components/chat/ChatHeader';
@@ -194,12 +194,11 @@ const ChatView: React.FC = () => {
 
 // Main App Component with Routing
 const App: React.FC = () => {
-  const location = useLocation();
-
   return (
     <Routes>
-      <Route path="/" element={<ChatView key="/" />} />
-      <Route path="/chat/:chatId" element={<ChatView key={location.pathname} />} />
+      <Route path="/" element={<ChatView />} />
+      <Route path="/chat" element={<ChatView />} />
+      <Route path="/chat/:chatId" element={<ChatView />} />
     </Routes>
   );
 };

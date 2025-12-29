@@ -30,7 +30,11 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
   // Load chat if initialChatId is provided, or reset for new chat
   useEffect(() => {
     if (initialChatId && user) {
-      loadChat(initialChatId);
+      // Only load if we don't already have this chat loaded locally
+      // (e.g., we just created it and navigated here)
+      if (initialChatId !== chatId) {
+        loadChat(initialChatId);
+      }
     } else if (!initialChatId) {
       // Reset to welcome message for new chat
       setMessages([{
