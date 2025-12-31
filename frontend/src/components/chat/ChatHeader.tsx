@@ -106,7 +106,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             )}
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg max-w-[200px]">
               <UserIcon size={14} className="text-slate-400 flex-shrink-0" />
-              <span className="text-xs text-slate-300 truncate">{user.email}</span>
+              <span className="text-xs text-slate-300 truncate">{userProfile?.displayName || user.displayName || user.email}</span>
               {isAdmin && (
                 <span className="ml-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] rounded flex-shrink-0">
                   ADMIN
