@@ -27,6 +27,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioSourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const recognitionRef = useRef<any>(null);
   const silenceDetectionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -337,13 +338,40 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
   // Playback control functions
   const stopAudio = () => {
+    // Stop HTML audio element
     if (audioElementRef.current) {
       audioElementRef.current.pause();
       audioElementRef.current.currentTime = 0;
     }
+
+    // Stop Web Audio API source node
+    if (audioSourceNodeRef.current) {
+      try {
+        audioSourceNodeRef.current.stop();
+        audioSourceNodeRef.current.disconnect();
+      } catch (e) {
+        // Already stopped
+      }
+      audioSourceNodeRef.current = null;
+    }
+
+    // Close audio context
+    if (audioContextRef.current) {
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (e) {
+        // Already closed
+      }
+      audioContextRef.current = null;
+    }
+
+    // Cancel Web Speech API
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+
     setIsSpeaking(false);
     setIsAudioPaused(false);
   };
@@ -353,6 +381,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       audioElementRef.current.pause();
       setIsAudioPaused(true);
       setIsSpeaking(true); // Keep speaking state true so we know there's audio to resume
+    }
+    // Use AudioContext.suspend() for Web Audio API (PCM audio)
+    if (audioContextRef.current && audioContextRef.current.state === 'running') {
+      audioContextRef.current.suspend();
+      setIsAudioPaused(true);
+      setIsSpeaking(true);
     }
     if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
       window.speechSynthesis.pause();
@@ -364,6 +398,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const resumeAudio = () => {
     if (audioElementRef.current && audioElementRef.current.paused && isAudioPaused) {
       audioElementRef.current.play();
+      setIsAudioPaused(false);
+      setIsSpeaking(true);
+    }
+    // Use AudioContext.resume() for Web Audio API (PCM audio)
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
       setIsAudioPaused(false);
       setIsSpeaking(true);
     }
@@ -487,9 +527,10 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       const pcmData = new Int16Array(bytes.buffer);
       console.log('PCM samples:', pcmData.length);
 
-      // Create audio context if needed
+      // Create audio context if needed (don't close it until we're done)
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        console.log('Created new AudioContext for PCM playback');
       }
 
       // Create audio buffer
@@ -510,8 +551,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       source.buffer = audioBuffer;
       source.connect(audioContextRef.current.destination);
 
+      // Store reference so we can stop it later
+      audioSourceNodeRef.current = source;
+
       source.onended = () => {
         setIsSpeaking(false);
+        audioSourceNodeRef.current = null;
         // Auto-enable mic after DMN finishes speaking for natural conversation flow
         if (!isMuted) {
           setTimeout(() => {
@@ -577,14 +622,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (audioElementRef.current) {
-    // Stop Web Speech API as well
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-      audioElementRef.current.pause();
-      setIsSpeaking(false);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+
+    // When muting, stop all currently playing audio
+    if (newMutedState) {
+      stopAudio();
     }
   };
 
@@ -608,6 +651,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       }
     }
     isRecordingRef.current = false;
+    setIsRecording(false);
 
     // Stop speech recognition
     if (recognitionRef.current) {
@@ -618,16 +662,18 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       }
     }
 
-    // Stop Web Speech API
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    // Stop all audio playback (including Web Audio API and Web Speech API)
+    stopAudio();
 
-    // Stop audio playback
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current.currentTime = 0;
-    }
+    // Reset all state
+    setIsProcessing(false);
+    setIsSpeaking(false);
+    setIsAudioPaused(false);
+    setHasAudioToPlay(false);
+    setCurrentAudioData(null);
+    setTranscript('');
+    setResponse('');
+    setError(null);
 
     // Call parent's onClose
     onClose();
