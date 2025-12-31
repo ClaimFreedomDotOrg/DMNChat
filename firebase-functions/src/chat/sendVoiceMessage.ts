@@ -189,14 +189,14 @@ You are guiding the user through this specific journey. Tailor your responses ac
 CONVERSATION HISTORY:
 ${conversationHistory}
 
-Respond naturally and conversationally. Keep responses concise for voice interaction (2-3 sentences max unless complex topic requires more).`;
+Respond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). Always finish complete thoughts - don't leave sentences incomplete.`;
 
       const result = await ai.generate({
         model: "googleai/gemini-2.5-flash",
         prompt: prompt,
         config: {
           temperature: 0.7,
-          maxOutputTokens: 500, // Shorter for voice responses
+          maxOutputTokens: 800, // Increased to allow fuller responses
         },
       });
 
@@ -226,7 +226,10 @@ Respond naturally and conversationally. Keep responses concise for voice interac
       let audioResponseData: string | undefined;
 
       try {
-        logger.info("Generating TTS audio with Gemini");
+        logger.info("Generating TTS audio with Gemini", {
+          textLength: responseText.length,
+          textPreview: responseText.substring(0, 100)
+        });
 
         // For TTS model, pass ONLY the plain text string to be spoken
         // No structured prompt, no instructions - just the text
@@ -238,12 +241,16 @@ Respond naturally and conversationally. Keep responses concise for voice interac
           },
           config: {
             responseModalities: ["AUDIO"], // Only audio output
+            maxOutputTokens: 2048, // Increased for longer audio generation
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: {
                   voiceName: "Charon" // Deep, authoritative male voice
                 }
-              }
+              },
+              speakingRate: 1.0, // Normal speed for consistency
+              pitch: 0.0, // Neutral pitch for consistency
+              volumeGainDb: 0.0 // Normal volume for consistency
             }
           }
         });
