@@ -6,11 +6,11 @@ import ReactMarkdown from 'react-markdown';
 
 interface VoiceConversationProps {
   onClose: () => void;
-  journeyId?: string | null;
+  chatId?: string; // Current chat ID to send voice message to
   onChatUpdated?: (chatId: string) => void; // Notify parent when chat is updated
 }
 
-const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, journeyId, onChatUpdated }) => {
+const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, onChatUpdated }) => {
   const { user } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -251,7 +251,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, journeyI
 
     try {
       // Send audio to backend for processing with Gemini
-      const result = await sendVoiceMessage(audioBlob, journeyId || undefined);
+      const result = await sendVoiceMessage(audioBlob, chatId);
 
       setTranscript(result.transcript);
       setResponse(result.responseText);
@@ -463,6 +463,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, journeyI
 
       source.onended = () => {
         setIsSpeaking(false);
+        // Auto-enable mic after DMN finishes speaking for natural conversation flow
+        if (!isMuted) {
+          setTimeout(() => {
+            startRecording();
+          }, 500);
+        }
       };
 
       source.start(0);
@@ -488,7 +494,15 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, journeyI
       utterance.volume = 1.0;
 
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        // Auto-enable mic after DMN finishes speaking for natural conversation flow
+        if (!isMuted) {
+          setTimeout(() => {
+            startRecording();
+          }, 500);
+        }
+      };
       utterance.onerror = () => {
         setIsSpeaking(false);
         setError('Text-to-speech failed');
@@ -538,8 +552,14 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, journeyI
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl mx-4 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={handleEndCall}
+    >
+      <div
+        className="relative w-full max-w-2xl mx-4 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-700 bg-gradient-to-r from-sky-900/30 to-purple-900/30">

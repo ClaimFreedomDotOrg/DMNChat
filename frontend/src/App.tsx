@@ -155,7 +155,7 @@ const ChatView: React.FC = () => {
       {voiceConversationOpen && (
         <VoiceConversation
           onClose={() => setVoiceConversationOpen(false)}
-          journeyId={journeyId}
+          chatId={activeChatId || chatId || undefined}
           onChatUpdated={(updatedChatId) => {
             // Navigate to the chat that was updated by voice message
             if (updatedChatId && updatedChatId !== chatId) {

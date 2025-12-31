@@ -12,7 +12,7 @@ import { logger } from "firebase-functions/v2";
 
 interface SendVoiceMessageData {
   audioData: string; // base64 encoded audio
-  journeyId?: string;
+  chatId?: string; // Optional chat ID to add voice message to existing chat
 }
 
 interface VoiceMessageResponse {
@@ -41,7 +41,7 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
     }
 
     const userId = request.auth.uid;
-    const { audioData, journeyId } = request.data;
+    const { audioData, chatId: providedChatId } = request.data;
 
     // Validate input
     if (!audioData) {
@@ -51,7 +51,10 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
     const db = getFirestore();
 
     try {
-      logger.info("Processing voice message", { userId, journeyId });
+      logger.info("Processing voice message", {
+        userId,
+        chatId: providedChatId || "new"
+      });
 
       // Initialize Gemini API via genkit (inside function to avoid timeout)
       const { genkit } = await import("genkit");
@@ -97,22 +100,21 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
       logger.info("Audio transcribed", { transcript: transcript.substring(0, 100) });
 
       // Step 2: Get or create chat for this user
-      // Voice messages integrate into regular chat - no separate voice-only chats
       const userChatsRef = db.collection("users").doc(userId).collection("chats");
-
-      // Get the most recent chat (regardless of type)
-      const recentChatsSnapshot = await userChatsRef
-        .orderBy("updatedAt", "desc")
-        .limit(1)
-        .get();
 
       let chatId: string;
       let chatRef;
 
-      if (!recentChatsSnapshot.empty) {
-        // Continue existing chat (voice and text messages in same conversation)
-        chatId = recentChatsSnapshot.docs[0].id;
+      if (providedChatId) {
+        // Use the provided chatId (voice message in existing conversation)
+        chatId = providedChatId;
         chatRef = userChatsRef.doc(chatId);
+
+        // Verify chat exists
+        const chatDoc = await chatRef.get();
+        if (!chatDoc.exists) {
+          throw new HttpsError("not-found", "Chat not found");
+        }
       } else {
         // Create new chat with auto-generated title
         chatRef = userChatsRef.doc();
@@ -122,7 +124,7 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
           title: "New Conversation",
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
-          journeyId: journeyId || null,
+          journeyId: null,
           metadata: {
             messageCount: 0,
             tokensUsed: 0,
@@ -161,8 +163,12 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
         systemPrompt = systemConfigDoc.data()?.systemPrompt || systemPrompt;
       }
 
-      // Load journey-specific guidance if journeyId provided
+      // Load journey-specific guidance from chat if journeyId exists
       let journeyContext = "";
+      const chatDoc = await chatRef.get();
+      const chatData = chatDoc.data();
+      const journeyId = chatData?.journeyId;
+
       if (journeyId) {
         const journeyDoc = await db.collection("journeys").doc(journeyId).get();
         if (journeyDoc.exists) {

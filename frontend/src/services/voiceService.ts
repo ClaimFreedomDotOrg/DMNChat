@@ -14,7 +14,7 @@ export interface VoiceMessageResponse {
  */
 export const sendVoiceMessage = async (
   audioBlob: Blob,
-  journeyId?: string
+  chatId?: string
 ): Promise<VoiceMessageResponse> => {
   try {
     // Convert audio blob to base64
@@ -23,7 +23,7 @@ export const sendVoiceMessage = async (
     const sendVoiceMessage = httpsCallable(functions, 'sendVoiceMessage');
     const result = await sendVoiceMessage({
       audioData: base64Audio,
-      journeyId
+      chatId
     });
 
     return result.data as VoiceMessageResponse;
