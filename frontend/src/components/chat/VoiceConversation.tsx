@@ -22,6 +22,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const [response, setResponse] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [currentAudioData, setCurrentAudioData] = useState<string | null>(null);
+  const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -34,11 +35,13 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const silenceStartTimeRef = useRef<number | null>(null);
   const isRecordingRef = useRef<boolean>(false);
   const speechDetectedRef = useRef<boolean>(false);
+  const recordingStartTimeRef = useRef<number | null>(null);
 
   // Silence detection configuration
-  const SILENCE_THRESHOLD = 0.03; // Audio level threshold for silence
-  const SPEECH_THRESHOLD = 0.02; // Audio level threshold to detect speech has started
-  const SILENCE_DURATION = 2000; // 2 seconds of silence triggers auto-submit
+  const SILENCE_THRESHOLD = 0.04; // Audio level threshold for silence (increased to be less sensitive)
+  const SPEECH_THRESHOLD = 0.03; // Audio level threshold to detect speech has started
+  const SILENCE_DURATION = 3500; // 3.5 seconds of silence triggers auto-submit (increased from 2s)
+  const MIN_RECORDING_DURATION = 1000; // Minimum 1 second before silence detection can trigger
 
   // Initialize audio context and cleanup on unmount
   useEffect(() => {
@@ -110,6 +113,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       isRecordingRef.current = false;
       speechDetectedRef.current = false;
       silenceStartTimeRef.current = null;
+      recordingStartTimeRef.current = null;
 
       console.log('Cleanup complete');
     };
@@ -163,6 +167,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       mediaRecorderRef.current.start();
       setIsRecording(true);
       isRecordingRef.current = true;
+      recordingStartTimeRef.current = Date.now(); // Track when recording started
       speechDetectedRef.current = false; // Reset speech detection flag
       setError(null);
 
@@ -220,7 +225,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           console.log('Silence started');
         } else {
           const silenceDuration = Date.now() - silenceStartTimeRef.current;
-          if (silenceDuration >= SILENCE_DURATION) {
+          const recordingDuration = recordingStartTimeRef.current
+            ? Date.now() - recordingStartTimeRef.current
+            : 0;
+
+          // Only auto-submit if we've been recording for at least MIN_RECORDING_DURATION
+          if (recordingDuration >= MIN_RECORDING_DURATION && silenceDuration >= SILENCE_DURATION) {
             // Auto-submit after silence duration
             console.log('Silence duration reached - auto-submitting');
             stopRecording();
@@ -298,6 +308,8 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
     setIsProcessing(true);
     setError(null);
+    setResponse(''); // Clear previous response
+    setShowTranscriptOnly(true); // Show only transcript while processing
 
     try {
       // Send audio to backend for processing with Gemini
@@ -305,6 +317,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
       setTranscript(result.transcript);
       setResponse(result.responseText);
+      setShowTranscriptOnly(false); // Show response once processing is complete
 
       // Notify parent component that chat was updated
       if (onChatUpdated && result.chatId) {
@@ -768,7 +781,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           )}
 
           {/* Response Display */}
-          {response && (
+          {response && !showTranscriptOnly && (
             <div className="mt-4 w-full bg-sky-900/20 rounded-xl p-4 border border-sky-700/50">
               <div className="text-xs font-semibold text-sky-400 uppercase mb-2">DMN responds:</div>
               <div className="text-slate-200 prose prose-invert prose-sm max-w-none">
