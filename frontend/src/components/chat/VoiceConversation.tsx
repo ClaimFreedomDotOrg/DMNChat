@@ -687,8 +687,42 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       }
     }
 
-    // Stop all audio playback (including Web Audio API and Web Speech API)
-    stopAudio();
+    // CRITICAL: Stop ALL audio immediately - inline instead of calling stopAudio()
+    // Stop HTML audio element
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.src = '';
+      audioElementRef.current.load(); // Force reload to clear buffered data
+      audioElementRef.current = null;
+    }
+
+    // Stop Web Audio API source node
+    if (audioSourceNodeRef.current) {
+      try {
+        audioSourceNodeRef.current.stop();
+        audioSourceNodeRef.current.disconnect();
+      } catch (e) {
+        // Already stopped
+      }
+      audioSourceNodeRef.current = null;
+    }
+
+    // Close audio context immediately
+    if (audioContextRef.current) {
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (e) {
+        // Already closed
+      }
+      audioContextRef.current = null;
+    }
+
+    // Cancel Web Speech API immediately
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
 
     // Reset all state
     setIsProcessing(false);
