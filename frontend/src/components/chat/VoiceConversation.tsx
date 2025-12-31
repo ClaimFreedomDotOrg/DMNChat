@@ -319,6 +319,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
     setIsProcessing(true);
     setError(null);
+    setTranscript(''); // Clear transcript to avoid showing old message
     setResponse(''); // Clear previous response
     setShowTranscriptOnly(true); // Show only transcript while processing
 
@@ -326,7 +327,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       // Send audio to backend for processing with Gemini
       const result = await sendVoiceMessage(audioBlob, chatId);
 
-      setTranscript(result.transcript);
+      setTranscript(result.transcript); // Show final transcript from backend
       setResponse(result.responseText);
       setShowTranscriptOnly(false); // Show response once processing is complete
 
