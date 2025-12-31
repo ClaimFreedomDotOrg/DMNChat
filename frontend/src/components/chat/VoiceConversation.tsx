@@ -517,6 +517,18 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       };
 
       audioElementRef.current.src = audioUrl;
+
+      // Load the audio and wait for it to be ready
+      audioElementRef.current.load();
+      await new Promise(resolve => {
+        if (audioElementRef.current) {
+          audioElementRef.current.oncanplaythrough = resolve;
+        }
+      });
+
+      // Small delay to ensure smooth playback start
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       await audioElementRef.current.play();
     } catch (err) {
       console.error('Error playing audio:', err);
@@ -558,6 +570,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
         console.log('Created new AudioContext for PCM playback');
       }
 
+      // Resume audio context if suspended (required for autoplay policies)
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+        console.log('Resumed suspended AudioContext');
+      }
+
       // Create audio buffer
       const audioBuffer = audioContextRef.current.createBuffer(
         1, // mono
@@ -589,6 +607,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           }, 500);
         }
       };
+
+      // Small delay to ensure audio context is fully ready
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       source.start(0);
       console.log('PCM audio playback started');
