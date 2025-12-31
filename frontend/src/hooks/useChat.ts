@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Message } from '@/types';
 import { useAuth } from './useAuth';
-import { createChat, getChat, addMessage } from '@/services/chatService';
+import { createChat, getChat } from '@/services/chatService';
 import { sendMessageToAI, validateMessage, generateChatTitle } from '@/services/aiService';
 
 interface UseChatReturn {
@@ -108,13 +108,8 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         setLoadedChatId(currentChatId); // Mark as loaded so we don't re-fetch
       }
 
-      // Save user message to Firestore
-      if (currentChatId && user) {
-        await addMessage(user.uid, currentChatId, {
-          role: 'user',
-          text: text
-        });
-      }
+      // NOTE: Backend (sendMessageToAI) now handles saving both user and AI messages
+      // This prevents double-saving of messages
 
       // TODO: Call actual AI service
       // For now, use a placeholder response
@@ -156,14 +151,8 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
 
       setMessages(prev => [...prev, botMsg]);
 
-      // Save bot message to Firestore
-      if (currentChatId && user) {
-        await addMessage(user.uid, currentChatId, {
-          role: 'model',
-          text: responseText,
-          citations
-        });
-      }
+      // NOTE: Backend (sendMessageToAI) already saved the AI response to Firestore
+      // No need to save again here
     } catch (err: any) {
       console.error('Error sending message:', err);
       // Generate unique ID with timestamp + random component
