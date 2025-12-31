@@ -36,6 +36,7 @@ export interface Chat {
   createdAt: number;
   updatedAt: number;
   isPinned?: boolean;
+  journeyId?: string; // Optional reference to Journey being followed
 }
 
 // User types
@@ -64,6 +65,20 @@ export interface MemberLevel {
   description?: string; // Optional description of the tier
 }
 
+// Journey types
+export interface Journey {
+  id: string;
+  title: string;
+  description: string;
+  systemPrompt: string;
+  icon?: string; // Optional emoji or icon identifier
+  order?: number; // Display order in lists
+  isActive: boolean; // Whether the journey is available to users
+  createdAt: number;
+  updatedAt: number;
+  createdBy?: string; // Admin user ID who created this
+}
+
 // System Configuration types
 export interface SystemConfig {
   ai: {
@@ -80,6 +95,7 @@ export interface SystemConfig {
   systemPrompt: string;
   memberLevels: MemberLevel[]; // Configurable member tiers
   defaultMemberLevel: string; // Name of the default level for new users
+  defaultJourneyId?: string; // Optional default journey for new chats
 }
 
 // API Response types

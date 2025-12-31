@@ -9,9 +9,11 @@ interface UseChatReturn {
   isTyping: boolean;
   error: string | null;
   chatId: string | null;
-  sendMessage: (text: string) => Promise<void>;
+  journeyId: string | null;
+  sendMessage: (text: string, journeyId?: string) => Promise<void>;
   clearError: () => void;
   resetChat: () => void;
+  setJourneyId: (id: string | null) => void;
 }
 
 export const useChat = (initialChatId?: string): UseChatReturn => {
@@ -27,6 +29,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(initialChatId || null);
+  const [journeyId, setJourneyId] = useState<string | null>(null);
   const [loadedChatId, setLoadedChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -64,6 +67,8 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         setMessages(chat.messages);
         setChatId(id);
         setLoadedChatId(id);
+        // Load journey ID if present, otherwise clear it
+        setJourneyId(chat.journeyId || null);
       }
     } catch (err) {
       console.error('Error loading chat:', err);
@@ -73,7 +78,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     }
   };
 
-  const sendMessage = useCallback(async (text: string) => {
+  const sendMessage = useCallback(async (text: string, customJourneyId?: string) => {
     if (!text.trim() || isTyping) return;
 
     // Validate message
@@ -99,11 +104,14 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     setIsTyping(true);
 
     try {
+      // Use provided journeyId or the one from state
+      const effectiveJourneyId = customJourneyId || journeyId;
+
       // Create chat if this is the first message (and user is logged in)
       let currentChatId = chatId;
       if (!currentChatId && user) {
         const title = generateChatTitle(text);
-        currentChatId = await createChat(user.uid, title);
+        currentChatId = await createChat(user.uid, title, effectiveJourneyId || undefined);
         setChatId(currentChatId);
         setLoadedChatId(currentChatId); // Mark as loaded so we don't re-fetch
       }
@@ -120,7 +128,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
         // User is authenticated - call AI service
         try {
           // Use currentChatId if available, otherwise the AI service will handle it
-          const response = await sendMessageToAI(currentChatId || '', text);
+          const response = await sendMessageToAI(currentChatId || '', text, effectiveJourneyId || undefined);
           responseText = response.responseText;
           citations = response.citations;
         } catch (aiError: any) {
@@ -169,7 +177,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     } finally {
       setIsTyping(false);
     }
-  }, [isTyping, chatId, user]);
+  }, [isTyping, chatId, journeyId, user]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -184,6 +192,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     }]);
     setChatId(null);
     setLoadedChatId(null);
+    setJourneyId(null);
     setError(null);
   }, []);
 
@@ -192,8 +201,10 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     isTyping,
     error,
     chatId,
+    journeyId,
     sendMessage,
     clearError,
-    resetChat
+    resetChat,
+    setJourneyId
   };
 };

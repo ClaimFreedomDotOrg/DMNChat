@@ -17,13 +17,14 @@ import { Chat, Message } from '@/types';
 /**
  * Create a new chat
  */
-export const createChat = async (userId: string, title?: string): Promise<string> => {
+export const createChat = async (userId: string, title?: string, journeyId?: string): Promise<string> => {
   try {
     const chatsRef = collection(db, 'users', userId, 'chats');
     const chatDoc = await addDoc(chatsRef, {
       title: title || 'New Chat',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      ...(journeyId && { journeyId }), // Only include journeyId if provided
       metadata: {
         messageCount: 0,
         tokensUsed: 0
@@ -66,7 +67,8 @@ export const getChat = async (userId: string, chatId: string): Promise<Chat | nu
       messages,
       createdAt: (chatData.createdAt as Timestamp).toMillis(),
       updatedAt: (chatData.updatedAt as Timestamp).toMillis(),
-      isPinned: chatData.isPinned || false
+      isPinned: chatData.isPinned || false,
+      journeyId: chatData.journeyId || undefined
     };
   } catch (error) {
     console.error('Error fetching chat:', error);
@@ -109,7 +111,8 @@ export const getUserChats = async (userId: string, limitCount: number = 20): Pro
           messages,
           createdAt: (chatData.createdAt as Timestamp).toMillis(),
           updatedAt: (chatData.updatedAt as Timestamp).toMillis(),
-          isPinned: chatData.isPinned || false
+          isPinned: chatData.isPinned || false,
+          journeyId: chatData.journeyId || undefined
         };
       })
     );

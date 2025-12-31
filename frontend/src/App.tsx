@@ -4,6 +4,7 @@ import ChatMessage from './components/chat/ChatMessage';
 import MessageInput from './components/chat/MessageInput';
 import ChatHeader from './components/chat/ChatHeader';
 import ChatHistorySidebar from './components/chat/ChatHistorySidebar';
+import JourneySelector from './components/chat/JourneySelector';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AuthModal from './components/auth/AuthModal';
 import { Repository } from './types';
@@ -22,11 +23,12 @@ const ChatView: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
+  const [journeySelectorOpen, setJourneySelectorOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<{ focus: () => void }>(null);
 
   const { user, profile, loading: authLoading } = useAuth();
-  const { messages, isTyping, error, chatId: activeChatId, sendMessage, clearError, resetChat } = useChat(chatId);
+  const { messages, isTyping, error, chatId: activeChatId, journeyId, sendMessage, clearError, resetChat, setJourneyId } = useChat(chatId);
 
   // Update URL when a NEW chat is created (activeChatId goes from null to a value)
   useEffect(() => {
@@ -77,6 +79,15 @@ const ChatView: React.FC = () => {
     resetChat();
     navigate('/');
     setHistorySidebarOpen(false);
+    // Open journey selector for new chats
+    setJourneySelectorOpen(true);
+  };
+
+  const handleSelectJourney = (selectedJourneyId: string | undefined) => {
+    setJourneyId(selectedJourneyId || null);
+    setJourneySelectorOpen(false);
+    // Focus input after selecting journey
+    setTimeout(() => messageInputRef.current?.focus(), 100);
   };
 
   const handleSelectChat = (selectedChatId: string) => {
@@ -97,6 +108,38 @@ const ChatView: React.FC = () => {
         isOpen={adminDashboardOpen}
         onClose={() => setAdminDashboardOpen(false)}
       />
+
+      {/* Journey Selector Modal */}
+      {journeySelectorOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setJourneySelectorOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-slate-200 mb-2">Begin Your Journey</h2>
+              <p className="text-sm text-slate-400">
+                Select a guided journey or continue with general guidance.
+              </p>
+            </div>
+            <JourneySelector
+              selectedJourneyId={journeyId || undefined}
+              onSelectJourney={handleSelectJourney}
+            />
+            <div className="mt-6 pt-4 border-t border-slate-800">
+              <button
+                onClick={() => setJourneySelectorOpen(false)}
+                className="text-sm text-slate-400 hover:text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Backdrop overlay for mobile sidebar */}
       {historySidebarOpen && (
@@ -124,6 +167,7 @@ const ChatView: React.FC = () => {
           repoCount={repos.length}
           user={user}
           userProfile={profile}
+          journeyId={journeyId}
           onSignIn={() => setAuthModalOpen(true)}
           onSignOut={handleSignOut}
           onOpenAdmin={() => setAdminDashboardOpen(true)}
@@ -165,6 +209,34 @@ const ChatView: React.FC = () => {
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto scroll-smooth min-h-0">
           <div className="min-h-full p-4 pb-2">
+            {/* Empty state with journey selector button */}
+            {messages.filter(m => m.role === 'user').length === 0 && !isTyping && user && (
+              <div className="flex flex-col items-center justify-center min-h-full py-12">
+                <div className="max-w-md text-center space-y-6">
+                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-900/20">
+                    <span className="text-3xl text-white">🧭</span>
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-semibold text-slate-200">
+                      {journeyId ? 'Journey Awaits' : 'Begin Your Journey'}
+                    </h2>
+                    <p className="text-slate-400">
+                      {journeyId
+                        ? 'Ready to explore. Send a message to start.'
+                        : 'Choose a guided journey or start with general guidance.'}
+                    </p>
+                  </div>
+                  {!journeyId && (
+                    <button
+                      onClick={() => setJourneySelectorOpen(true)}
+                      className="px-6 py-3 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-sky-900/30"
+                    >
+                      Select a Journey
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {messages.map(msg => (
               <ChatMessage key={msg.id} message={msg} />
             ))}

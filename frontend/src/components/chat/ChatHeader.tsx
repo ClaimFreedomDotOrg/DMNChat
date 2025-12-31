@@ -1,12 +1,14 @@
 import React from 'react';
-import { Settings, Sparkles, LogIn, LogOut, User as UserIcon, Menu } from 'lucide-react';
+import { Settings, Sparkles, LogIn, LogOut, User as UserIcon, Menu, Compass } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserProfile } from '@/types';
+import { useJourneys } from '@/hooks/useJourneys';
 
 interface ChatHeaderProps {
   repoCount: number;
   user: User | null;
   userProfile: UserProfile | null;
+  journeyId: string | null;
   onSignIn: () => void;
   onSignOut: () => void;
   onOpenAdmin: () => void;
@@ -17,12 +19,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   repoCount,
   user,
   userProfile,
+  journeyId,
   onSignIn,
   onSignOut,
   onOpenAdmin,
   onToggleHistory
 }) => {
   const isAdmin = userProfile?.role === 'admin';
+  const { journeys } = useJourneys();
+  const currentJourney = journeys.find(j => j.id === journeyId);
 
   return (
     <header
@@ -59,7 +64,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-        <div className="text-xs text-slate-500 font-mono hidden sm:block">
+        {currentJourney && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-sky-900/30 border border-sky-700/50 rounded-full text-xs text-sky-300">
+            <Compass size={12} />
+            <span className="hidden sm:inline">{currentJourney.icon}</span>
+            <span className="font-medium">{currentJourney.title}</span>
+          </div>
+        )}
+        <div className="text-xs text-slate-500 font-mono hidden md:block">
           {repoCount > 0
             ? `${repoCount} Knowledge Base${repoCount > 1 ? 's' : ''} Loaded`
             : 'No Context Loaded'}

@@ -5,11 +5,8 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
-
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 // Member Level Configuration
 interface MemberLevel {
@@ -40,6 +37,7 @@ interface SystemConfig {
 interface SendMessageData {
   chatId: string;
   message: string;
+  journeyId?: string; // Optional journey ID for specialized guidance
 }
 
 interface Citation {
@@ -194,7 +192,9 @@ async function retrieveContext(
 }
 
 export const sendMessage = onCall<SendMessageData>(
-  { secrets: [geminiApiKey] },
+  {
+    secrets: ["GEMINI_API_KEY"],
+  },
   async (request) => {
     // Authentication check
     if (!request.auth) {
@@ -202,7 +202,7 @@ export const sendMessage = onCall<SendMessageData>(
     }
 
     const userId = request.auth.uid;
-    const { chatId, message } = request.data;
+    const { chatId, message, journeyId } = request.data;
 
     // Input validation
     if (!chatId || !message) {
@@ -218,6 +218,23 @@ export const sendMessage = onCall<SendMessageData>(
 
       // Load system configuration to get member level limits
       const systemConfig = await loadSystemConfig(db);
+
+      // Load journey if journeyId is provided
+      let journeySystemPrompt: string | null = null;
+      if (journeyId) {
+        try {
+          const journeyDoc = await db.collection("journeys").doc(journeyId).get();
+          if (journeyDoc.exists && journeyDoc.data()?.isActive) {
+            journeySystemPrompt = journeyDoc.data()?.systemPrompt;
+            logger.info(`Using journey-specific system prompt: ${journeyDoc.data()?.title}`);
+          } else {
+            logger.warn(`Journey not found or inactive: ${journeyId}`);
+          }
+        } catch (error) {
+          logger.error("Error loading journey:", error);
+          // Continue with default system prompt
+        }
+      }
 
       // Check message limits for user's member level
       const userRef = db.collection("users").doc(userId);
@@ -297,6 +314,7 @@ export const sendMessage = onCall<SendMessageData>(
           title: "New Chat",
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
+          journeyId: journeyId || null, // Store journey reference
           metadata: {
             messageCount: 0,
             tokensUsed: 0
@@ -353,7 +371,7 @@ export const sendMessage = onCall<SendMessageData>(
       }
 
       // Check if API key is available
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY secret not configured");
       }
@@ -370,9 +388,12 @@ export const sendMessage = onCall<SendMessageData>(
       });
 
       // Generate AI response with context using config from database
+      // Use journey-specific system prompt if available, otherwise use default
+      const effectiveSystemPrompt = journeySystemPrompt || systemConfig.systemPrompt;
+
       const { text } = await ai.generate({
         model: googleAI.model(systemConfig.ai.model),
-        prompt: `${systemConfig.systemPrompt}${contextSection}${historySection}\n\nUser: ${message}\n\nDMN:`,
+        prompt: `${effectiveSystemPrompt}${contextSection}${historySection}\n\nUser: ${message}\n\nDMN:`,
         config: {
           temperature: systemConfig.ai.temperature,
           maxOutputTokens: systemConfig.ai.maxTokens,

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Database, LayoutDashboard, Settings, X, AlertTriangle } from 'lucide-react';
+import { Users, Database, LayoutDashboard, Settings, X, AlertTriangle, Compass } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isSystemConfigInitialized } from '@/services/adminService';
 import RepositoryPanel from './panels/RepositoryPanel';
 import UserManagementPanel from './panels/UserManagementPanel';
 import OverviewPanel from './panels/OverviewPanel';
 import SystemConfigPanel from './panels/SystemConfigPanel';
+import JourneyManager from './panels/JourneyManager';
 
-type Panel = 'overview' | 'repositories' | 'users' | 'config';
+type Panel = 'overview' | 'repositories' | 'users' | 'config' | 'journeys';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'repositories', label: 'Repositories', icon: Database },
+    { id: 'journeys', label: 'Journeys', icon: Compass },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'config', label: 'System Config', icon: Settings },
   ] as const;
@@ -131,6 +133,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
 
             {activePanel === 'overview' && <OverviewPanel />}
             {activePanel === 'repositories' && <RepositoryPanel />}
+            {activePanel === 'journeys' && <JourneyManager />}
             {activePanel === 'users' && <UserManagementPanel />}
             {activePanel === 'config' && (
               <SystemConfigPanel onConfigSaved={() => setConfigInitialized(true)} />

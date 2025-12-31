@@ -66,6 +66,7 @@ functions/lib/
 # Firebase Admin SDK Keys (NEVER commit these!)
 *-firebase-adminsdk-*.json
 service-account-*.json
+serviceAccountKey.json
 
 # Firebase Functions
 functions/node_modules/

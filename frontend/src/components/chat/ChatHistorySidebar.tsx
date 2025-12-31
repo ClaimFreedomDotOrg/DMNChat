@@ -3,6 +3,7 @@ import { MessageSquare, Plus, Trash2, Clock, ChevronLeft, Pin, Edit2, Check, X }
 import { Chat } from '@/types';
 import { getUserChats, deleteChat, renameChat, togglePinChat } from '@/services/chatService';
 import { useAuth } from '@/hooks/useAuth';
+import { useJourneys } from '@/hooks/useJourneys';
 
 interface ChatHistorySidebarProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   onNewChat,
 }) => {
   const { user } = useAuth();
+  const { journeys } = useJourneys();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -164,32 +166,49 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
             </div>
           ) : (
             <div className="space-y-1.5 sm:space-y-2">
-              {chats.map((chat) => (
-                <div
-                  key={chat.id}
-                  onClick={() => {
-                    if (editingChatId !== chat.id) {
-                      onSelectChat(chat.id);
-                    }
-                  }}
-                  className={`group relative p-2.5 sm:p-3 rounded-lg cursor-pointer transition-colors ${
-                    chat.id === currentChatId
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-slate-800 hover:bg-slate-750 text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    {/* Pin Icon */}
+              {chats.map((chat) => {
+                const chatJourney = chat.journeyId ? journeys.find(j => j.id === chat.journeyId) : null;
+
+                return (
+                  <div
+                    key={chat.id}
+                    onClick={() => {
+                      if (editingChatId !== chat.id) {
+                        onSelectChat(chat.id);
+                      }
+                    }}
+                    className={`group relative p-2.5 sm:p-3 rounded-lg cursor-pointer transition-colors ${
+                      chat.id === currentChatId
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-800 hover:bg-slate-750 text-slate-200'
+                    }`}
+                  >
+                    {/* Pin Icon - Overlay in bottom-right */}
                     {chat.isPinned && (
-                      <Pin
-                        size={14}
-                        className="flex-shrink-0 mt-0.5 fill-current"
-                        title="Pinned"
-                      />
+                      <div 
+                        title="Pinned" 
+                        className="absolute bottom-2 right-2 z-10"
+                      >
+                        <Pin
+                          size={12}
+                          className="fill-current opacity-70"
+                        />
+                      </div>
                     )}
 
-                    {/* Title and Details */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 sm:gap-3">
+
+                      {/* Journey Icon or Default */}
+                      <span
+                        className="flex-shrink-0 text-base"
+                        title={chatJourney ? `Journey: ${chatJourney.title}` : 'General Guidance'}
+                        aria-label={chatJourney ? `Journey: ${chatJourney.title}` : 'General Guidance'}
+                      >
+                        {chatJourney ? chatJourney.icon : '💬'}
+                      </span>
+
+                      {/* Title and Details */}
+                      <div className="flex-1 min-w-0">
                       {editingChatId === chat.id ? (
                         // Editing Mode
                         <form onSubmit={(e) => handleRename(chat.id, e)} className="mb-1">
@@ -205,7 +224,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                         </form>
                       ) : (
                         // Display Mode
-                        <h3 className="font-medium text-sm truncate mb-0.5 sm:mb-1">
+                        <h3 className="font-medium text-sm truncate mb-0.5 sm:mb-1 pr-0 lg:pr-0">
                           {chat.title || 'Untitled Chat'}
                         </h3>
                       )}
@@ -216,37 +235,38 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                         <span className="hidden sm:inline">·</span>
                         <span className="hidden sm:inline">{chat.messages.length} messages</span>
                       </div>
+                      </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Action Buttons - Mobile inline, Desktop overlay on hover */}
+                    <div className="flex lg:hidden items-center gap-1 mt-2">
                       {editingChatId === chat.id ? (
                         // Edit Mode Buttons
                         <>
                           <button
                             onClick={(e) => handleRename(chat.id, e)}
-                            className={`p-1.5 sm:p-1 rounded transition-opacity ${
+                            className={`p-1.5 rounded transition-opacity ${
                               chat.id === currentChatId
                                 ? 'hover:bg-sky-700'
                                 : 'hover:bg-slate-700'
                             }`}
                             title="Save"
                           >
-                            <Check size={13} className="sm:w-3.5 sm:h-3.5" />
+                            <Check size={13} />
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               cancelEditing();
                             }}
-                            className={`p-1.5 sm:p-1 rounded transition-opacity ${
+                            className={`p-1.5 rounded transition-opacity ${
                               chat.id === currentChatId
                                 ? 'hover:bg-sky-700'
                                 : 'hover:bg-slate-700'
                             }`}
                             title="Cancel"
                           >
-                            <X size={13} className="sm:w-3.5 sm:h-3.5" />
+                            <X size={13} />
                           </button>
                         </>
                       ) : (
@@ -254,46 +274,124 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                         <>
                           <button
                             onClick={(e) => handlePinToggle(chat.id, chat.isPinned || false, e)}
-                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                            className={`p-1.5 rounded transition-opacity ${
                               chat.id === currentChatId
                                 ? 'hover:bg-sky-700'
                                 : 'hover:bg-slate-700'
-                            } ${chat.isPinned ? 'opacity-100' : ''}`}
+                            }`}
                             title={chat.isPinned ? 'Unpin' : 'Pin'}
                           >
                             <Pin
                               size={13}
-                              className={`sm:w-3.5 sm:h-3.5 ${chat.isPinned ? 'fill-current' : ''}`}
+                              className={chat.isPinned ? 'fill-current' : ''}
                             />
                           </button>
                           <button
                             onClick={(e) => startEditing(chat.id, chat.title, e)}
-                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                            className={`p-1.5 rounded transition-opacity ${
                               chat.id === currentChatId
                                 ? 'hover:bg-sky-700'
                                 : 'hover:bg-slate-700'
                             }`}
                             title="Rename"
                           >
-                            <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                            <Edit2 size={13} />
                           </button>
                           <button
                             onClick={(e) => handleDeleteChat(chat.id, e)}
-                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                            className={`p-1.5 rounded transition-opacity ${
                               chat.id === currentChatId
                                 ? 'hover:bg-sky-700'
                                 : 'hover:bg-slate-700'
                             }`}
                             title="Delete"
                           >
-                            <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Desktop Action Buttons - Overlay on hover */}
+                    <div className={`hidden lg:flex absolute top-2 right-2 items-center gap-1 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${
+                      chat.id === currentChatId
+                        ? 'bg-sky-700'
+                        : 'bg-slate-900/95 backdrop-blur'
+                    }`}>
+                      {editingChatId === chat.id ? (
+                        // Edit Mode Buttons
+                        <>
+                          <button
+                            onClick={(e) => handleRename(chat.id, e)}
+                            className={`p-1 rounded transition-colors ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-600'
+                                : 'hover:bg-slate-800'
+                            }`}
+                            title="Save"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelEditing();
+                            }}
+                            className={`p-1 rounded transition-colors ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-600'
+                                : 'hover:bg-slate-800'
+                            }`}
+                            title="Cancel"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        // Normal Mode Buttons
+                        <>
+                          <button
+                            onClick={(e) => handlePinToggle(chat.id, chat.isPinned || false, e)}
+                            className={`p-1 rounded transition-colors ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-600'
+                                : 'hover:bg-slate-800'
+                            }`}
+                            title={chat.isPinned ? 'Unpin' : 'Pin'}
+                          >
+                            <Pin
+                              size={14}
+                              className={chat.isPinned ? 'fill-current' : ''}
+                            />
+                          </button>
+                          <button
+                            onClick={(e) => startEditing(chat.id, chat.title, e)}
+                            className={`p-1 rounded transition-colors ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-600'
+                                : 'hover:bg-slate-800'
+                            }`}
+                            title="Rename"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            className={`p-1 rounded transition-colors ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-600'
+                                : 'hover:bg-slate-800'
+                            }`}
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

@@ -7,11 +7,12 @@ import { Message } from '@/types';
  */
 export const sendMessageToAI = async (
   chatId: string,
-  message: string
+  message: string,
+  journeyId?: string
 ): Promise<{ messageId: string; responseText: string; citations?: any[] }> => {
   try {
     const sendMessage = httpsCallable(functions, 'sendMessage');
-    const result = await sendMessage({ chatId, message });
+    const result = await sendMessage({ chatId, message, journeyId });
 
     return result.data as any;
   } catch (error: any) {

@@ -7,11 +7,7 @@
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-
-const githubToken = defineSecret("GITHUB_TOKEN");
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 interface IndexRepositoryData {
   sourceId: string;
@@ -175,7 +171,7 @@ function chunkContent(content: string): string[] {
 
 export const indexRepository = onCall<IndexRepositoryData>(
   {
-    secrets: [githubToken, geminiApiKey],
+    secrets: ["GITHUB_TOKEN", "GEMINI_API_KEY"],
     timeoutSeconds: 540, // 9 minutes max
     memory: "1GiB"
   },
@@ -234,7 +230,7 @@ export const indexRepository = onCall<IndexRepositoryData>(
       const { owner, repo } = parsed;
 
       // Fetch file tree
-      const token = githubToken.value();
+      const token = process.env.GITHUB_TOKEN;
       const allFiles = await fetchGitHubTree(owner, repo, branch, token);
 
       logger.info(`Fetched ${allFiles.length} files from GitHub tree`);
