@@ -65,7 +65,8 @@ export const getChat = async (userId: string, chatId: string): Promise<Chat | nu
       title: chatData.title,
       messages,
       createdAt: (chatData.createdAt as Timestamp).toMillis(),
-      updatedAt: (chatData.updatedAt as Timestamp).toMillis()
+      updatedAt: (chatData.updatedAt as Timestamp).toMillis(),
+      isPinned: chatData.isPinned || false
     };
   } catch (error) {
     console.error('Error fetching chat:', error);
@@ -107,7 +108,8 @@ export const getUserChats = async (userId: string, limitCount: number = 20): Pro
           title: chatData.title,
           messages,
           createdAt: (chatData.createdAt as Timestamp).toMillis(),
-          updatedAt: (chatData.updatedAt as Timestamp).toMillis()
+          updatedAt: (chatData.updatedAt as Timestamp).toMillis(),
+          isPinned: chatData.isPinned || false
         };
       })
     );
@@ -153,6 +155,46 @@ export const addMessage = async (
   } catch (error) {
     console.error('Error adding message:', error);
     throw new Error('Failed to add message');
+  }
+};
+
+/**
+ * Rename a chat
+ */
+export const renameChat = async (userId: string, chatId: string, newTitle: string): Promise<void> => {
+  try {
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    const batch = writeBatch(db);
+
+    batch.update(chatRef, {
+      title: newTitle.trim(),
+      updatedAt: serverTimestamp()
+    });
+
+    await batch.commit();
+  } catch (error) {
+    console.error('Error renaming chat:', error);
+    throw new Error('Failed to rename chat');
+  }
+};
+
+/**
+ * Pin or unpin a chat
+ */
+export const togglePinChat = async (userId: string, chatId: string, isPinned: boolean): Promise<void> => {
+  try {
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    const batch = writeBatch(db);
+
+    batch.update(chatRef, {
+      isPinned,
+      updatedAt: serverTimestamp()
+    });
+
+    await batch.commit();
+  } catch (error) {
+    console.error('Error toggling pin:', error);
+    throw new Error('Failed to pin/unpin chat');
   }
 };
 

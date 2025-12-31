@@ -35,6 +35,7 @@ export interface Chat {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  isPinned?: boolean;
 }
 
 // User types

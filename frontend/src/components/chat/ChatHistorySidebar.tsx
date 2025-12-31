@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Trash2, Clock, ChevronLeft } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Clock, ChevronLeft, Pin, Edit2, Check, X } from 'lucide-react';
 import { Chat } from '@/types';
-import { getUserChats, deleteChat } from '@/services/chatService';
+import { getUserChats, deleteChat, renameChat, togglePinChat } from '@/services/chatService';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ChatHistorySidebarProps {
@@ -22,6 +22,8 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   useEffect(() => {
     if (isOpen && user) {
@@ -35,7 +37,13 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     try {
       setLoading(true);
       const userChats = await getUserChats(user.uid);
-      setChats(userChats);
+      // Sort chats: pinned first, then by updatedAt
+      const sortedChats = userChats.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.updatedAt - a.updatedAt;
+      });
+      setChats(sortedChats);
     } catch (error) {
       console.error('Error loading chats:', error);
     } finally {
@@ -61,6 +69,52 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     } catch (error: any) {
       console.error('Error deleting chat:', error);
       alert(`Failed to delete conversation: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  const handlePinToggle = async (chatId: string, currentPinned: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!user) return;
+
+    try {
+      await togglePinChat(user.uid, chatId, !currentPinned);
+      await loadChats();
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+      alert('Failed to pin/unpin conversation');
+    }
+  };
+
+  const startEditing = (chatId: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingChatId(chatId);
+    setEditingTitle(currentTitle);
+  };
+
+  const cancelEditing = () => {
+    setEditingChatId(null);
+    setEditingTitle('');
+  };
+
+  const handleRename = async (chatId: string, e?: React.MouseEvent | React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!user || !editingTitle.trim()) {
+      cancelEditing();
+      return;
+    }
+
+    try {
+      await renameChat(user.uid, chatId, editingTitle);
+      await loadChats();
+      cancelEditing();
+    } catch (error) {
+      console.error('Error renaming chat:', error);
+      alert('Failed to rename conversation');
     }
   };
 
@@ -114,36 +168,130 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                 <div
                   key={chat.id}
                   onClick={() => {
-                    onSelectChat(chat.id);
+                    if (editingChatId !== chat.id) {
+                      onSelectChat(chat.id);
+                    }
                   }}
-                  className={`group relative p-2.5 sm:p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-2 sm:gap-3 active:scale-[0.98] ${
+                  className={`group relative p-2.5 sm:p-3 rounded-lg cursor-pointer transition-colors ${
                     chat.id === currentChatId
                       ? 'bg-sky-600 text-white'
                       : 'bg-slate-800 hover:bg-slate-750 text-slate-200'
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm truncate mb-0.5 sm:mb-1">
-                      {chat.title || 'Untitled Chat'}
-                    </h3>
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-xs opacity-70">
-                      <Clock size={11} className="sm:w-3 sm:h-3 flex-shrink-0" />
-                      <span className="truncate">{formatDate(chat.updatedAt)}</span>
-                      <span className="hidden sm:inline">·</span>
-                      <span className="hidden sm:inline">{chat.messages.length} messages</span>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    {/* Pin Icon */}
+                    {chat.isPinned && (
+                      <Pin
+                        size={14}
+                        className="flex-shrink-0 mt-0.5 fill-current"
+                        title="Pinned"
+                      />
+                    )}
+
+                    {/* Title and Details */}
+                    <div className="flex-1 min-w-0">
+                      {editingChatId === chat.id ? (
+                        // Editing Mode
+                        <form onSubmit={(e) => handleRename(chat.id, e)} className="mb-1">
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-2 py-1 text-sm bg-slate-700 border border-slate-600 rounded text-slate-200 focus:outline-none focus:border-sky-500"
+                            autoFocus
+                            maxLength={100}
+                          />
+                        </form>
+                      ) : (
+                        // Display Mode
+                        <h3 className="font-medium text-sm truncate mb-0.5 sm:mb-1">
+                          {chat.title || 'Untitled Chat'}
+                        </h3>
+                      )}
+
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-xs opacity-70">
+                        <Clock size={11} className="sm:w-3 sm:h-3 flex-shrink-0" />
+                        <span className="truncate">{formatDate(chat.updatedAt)}</span>
+                        <span className="hidden sm:inline">·</span>
+                        <span className="hidden sm:inline">{chat.messages.length} messages</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {editingChatId === chat.id ? (
+                        // Edit Mode Buttons
+                        <>
+                          <button
+                            onClick={(e) => handleRename(chat.id, e)}
+                            className={`p-1.5 sm:p-1 rounded transition-opacity ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-700'
+                                : 'hover:bg-slate-700'
+                            }`}
+                            title="Save"
+                          >
+                            <Check size={13} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelEditing();
+                            }}
+                            className={`p-1.5 sm:p-1 rounded transition-opacity ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-700'
+                                : 'hover:bg-slate-700'
+                            }`}
+                            title="Cancel"
+                          >
+                            <X size={13} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        // Normal Mode Buttons
+                        <>
+                          <button
+                            onClick={(e) => handlePinToggle(chat.id, chat.isPinned || false, e)}
+                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-700'
+                                : 'hover:bg-slate-700'
+                            } ${chat.isPinned ? 'opacity-100' : ''}`}
+                            title={chat.isPinned ? 'Unpin' : 'Pin'}
+                          >
+                            <Pin
+                              size={13}
+                              className={`sm:w-3.5 sm:h-3.5 ${chat.isPinned ? 'fill-current' : ''}`}
+                            />
+                          </button>
+                          <button
+                            onClick={(e) => startEditing(chat.id, chat.title, e)}
+                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-700'
+                                : 'hover:bg-slate-700'
+                            }`}
+                            title="Rename"
+                          >
+                            <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${
+                              chat.id === currentChatId
+                                ? 'hover:bg-sky-700'
+                                : 'hover:bg-slate-700'
+                            }`}
+                            title="Delete"
+                          >
+                            <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteChat(chat.id, e)}
-                    className={`p-1.5 sm:p-1 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 ${
-                      chat.id === currentChatId
-                        ? 'hover:bg-sky-700'
-                        : 'hover:bg-slate-700'
-                    }`}
-                    title="Delete chat"
-                  >
-                    <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
-                  </button>
                 </div>
               ))}
             </div>
