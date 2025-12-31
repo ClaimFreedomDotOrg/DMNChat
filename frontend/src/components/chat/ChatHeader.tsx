@@ -69,8 +69,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {currentJourney && (
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-sky-900/30 border border-sky-700/50 rounded-full text-xs text-sky-300">
             <Compass size={12} />
-            <span className="hidden sm:inline">{currentJourney.icon}</span>
-            <span className="font-medium">{currentJourney.title}</span>
+            <span>{currentJourney.icon}</span>
+            <span className="font-medium hidden sm:inline">{currentJourney.title}</span>
           </div>
         )}
         <div className="text-xs text-slate-500 font-mono hidden md:block">
@@ -86,11 +86,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             {onVoiceClick && (
               <button
                 onClick={onVoiceClick}
-                className="p-2 hover:bg-slate-800 rounded-md text-slate-400 hover:text-purple-400 transition-colors flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg shadow-lg shadow-purple-900/30 transition-all flex-shrink-0 font-medium"
                 title="Voice conversation"
                 aria-label="Voice conversation"
               >
                 <Mic size={18} className="sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline text-sm">Voice</span>
               </button>
             )}
             {isAdmin && (

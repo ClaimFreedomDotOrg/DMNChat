@@ -142,13 +142,15 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
       });
 
       // Step 4: Get conversation history for context
+      // For voice, use shorter history to prevent repetition in long conversations
       const messagesSnapshot = await chatRef
         .collection("messages")
-        .orderBy("timestamp", "asc")
-        .limit(20)
+        .orderBy("timestamp", "desc")
+        .limit(10) // Reduced from 20 for voice to prevent repetition
         .get();
 
       const conversationHistory = messagesSnapshot.docs
+        .reverse() // Reverse to get chronological order (oldest to newest)
         .map((doc) => {
           const data = doc.data();
           return `${data.role === "user" ? "USER" : "DMN"}: ${data.text}`;
