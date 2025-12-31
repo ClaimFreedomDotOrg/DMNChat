@@ -4,6 +4,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  writeBatch,
   query,
   orderBy,
   limit,
@@ -156,17 +157,49 @@ export const addMessage = async (
 };
 
 /**
- * Delete a chat
+ * Delete a chat and all its messages
  */
 export const deleteChat = async (userId: string, chatId: string): Promise<void> => {
   try {
-    // TODO: Implement cascade delete of messages subcollection
-    // For now, just delete the chat document
-    // const chatRef = doc(db, 'users', userId, 'chats', chatId);
-    // await deleteDoc(chatRef);
-    console.warn('Delete chat not fully implemented', userId, chatId);
-  } catch (error) {
+    const chatRef = doc(db, 'users', userId, 'chats', chatId);
+    const messagesRef = collection(chatRef, 'messages');
+
+    console.log(`Starting deletion of chat ${chatId} for user ${userId}`);
+
+    // Get all messages in the chat
+    const messagesSnap = await getDocs(messagesRef);
+    console.log(`Found ${messagesSnap.size} messages to delete`);
+
+    // Use a batch to delete all messages and the chat document
+    const batch = writeBatch(db);
+
+    // Delete all messages
+    messagesSnap.docs.forEach((messageDoc) => {
+      console.log(`Queuing message ${messageDoc.id} for deletion`);
+      batch.delete(messageDoc.ref);
+    });
+
+    // Delete the chat document itself
+    console.log(`Queuing chat document ${chatId} for deletion`);
+    batch.delete(chatRef);
+
+    // Commit the batch
+    console.log('Committing batch deletion...');
+    await batch.commit();
+    console.log(`Successfully committed deletion of chat ${chatId} and ${messagesSnap.size} messages`);
+
+    // Verify deletion
+    const verifySnap = await getDoc(chatRef);
+    if (verifySnap.exists()) {
+      console.error('WARNING: Chat document still exists after deletion!');
+      throw new Error('Deletion verification failed - document still exists');
+    } else {
+      console.log('Deletion verified - chat document no longer exists');
+    }
+  } catch (error: any) {
     console.error('Error deleting chat:', error);
-    throw new Error('Failed to delete chat');
+    console.error('Error code:', error?.code);
+    console.error('Error message:', error?.message);
+    throw error; // Throw the original error to see details in the UI
   }
 };

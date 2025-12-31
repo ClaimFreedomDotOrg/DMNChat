@@ -50,14 +50,17 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
 
     try {
       await deleteChat(user.uid, chatId);
-      setChats(chats.filter(c => c.id !== chatId));
+
+      // Reload chats from server to ensure consistency
+      await loadChats();
 
       // If deleting current chat, trigger new chat
       if (chatId === currentChatId) {
         onNewChat();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting chat:', error);
+      alert(`Failed to delete conversation: ${error?.message || 'Unknown error'}`);
     }
   };
 
