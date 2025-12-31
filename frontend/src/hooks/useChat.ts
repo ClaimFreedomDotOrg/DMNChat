@@ -133,7 +133,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     setError(null);
 
     // Generate unique ID with timestamp + random component
-    const userMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const userMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
     const userMsg: Message = {
       id: userMsgId,
       role: 'user',
@@ -158,54 +158,53 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       }
 
       // NOTE: Backend (sendMessageToAI) now handles saving both user and AI messages
-      // This prevents double-saving of messages
-
-      // TODO: Call actual AI service
-      // For now, use a placeholder response
-      let responseText: string;
-      let citations: any[] | undefined;
+      // The real-time Firestore listener will automatically update the UI with the AI response
+      // We don't add the AI response to local state to prevent duplicates
 
       if (user) {
         // User is authenticated - call AI service
         try {
           // Use currentChatId if available, otherwise the AI service will handle it
-          const response = await sendMessageToAI(currentChatId || '', text, effectiveJourneyId || undefined);
-          responseText = response.responseText;
-          citations = response.citations;
+          await sendMessageToAI(currentChatId || '', text, effectiveJourneyId || undefined);
+          // AI response will appear via Firestore real-time listener
         } catch (aiError: any) {
           console.error('AI service error:', aiError);
-          // Check if it's a rate limit error
+          
+          // For errors, we show them immediately in local state
+          let errorText: string;
           if (aiError.message && aiError.message.includes('Daily message limit reached')) {
-            responseText = `${aiError.message}\n\nTo receive a higher message limit, subscribe to Jeshua ben Joseph on Substack at [jeshuabenjoseph.substack.com](https://jeshuabenjoseph.substack.com/). Even free subscribers receive an increased limit, and paid subscribers receive even higher limits based on their membership tier.\n\nFor support inquiries, please contact Jeshua on Substack.`;
+            errorText = `${aiError.message}\n\nTo receive a higher message limit, subscribe to Jeshua ben Joseph on Substack at [jeshuabenjoseph.substack.com](https://jeshuabenjoseph.substack.com/). Even free subscribers receive an increased limit, and paid subscribers receive even higher limits based on their membership tier.\n\nFor support inquiries, please contact Jeshua on Substack.`;
           } else {
-            // Fallback if backend not ready
-            responseText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please try again later.`;
+            errorText = `The backend AI service encountered an error: ${aiError.message || 'Unknown error'}. Please try again later.`;
           }
+          
+          // Add error message to local state (not saved to backend)
+          const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+          const errorMsg: Message = {
+            id: errorMsgId,
+            role: 'model',
+            text: errorText,
+            timestamp: Date.now(),
+            isError: true
+          };
+          setMessages(prev => [...prev, errorMsg]);
         }
       } else {
-        // Guest mode - no backend call
+        // Guest mode - no backend call, show message immediately
         console.log('User not authenticated, showing guest mode message');
-        responseText = "Please sign in to chat with DMN. A free plan is available, providing AI-powered responses grounded in the Neuro-Gnostic framework.";
+        const guestMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+        const guestMsg: Message = {
+          id: guestMsgId,
+          role: 'model',
+          text: "Please sign in to chat with DMN. A free plan is available, providing AI-powered responses grounded in the Neuro-Gnostic framework.",
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, guestMsg]);
       }
-
-      // Generate unique ID with timestamp + random component
-      const botMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const botMsg: Message = {
-        id: botMsgId,
-        role: 'model',
-        text: responseText,
-        timestamp: Date.now(),
-        ...(citations && citations.length > 0 ? { citations } : {})
-      };
-
-      setMessages(prev => [...prev, botMsg]);
-
-      // NOTE: Backend (sendMessageToAI) already saved the AI response to Firestore
-      // No need to save again here
     } catch (err: any) {
       console.error('Error sending message:', err);
       // Generate unique ID with timestamp + random component
-      const errorMsgId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
       const errorMsg: Message = {
         id: errorMsgId,
         role: 'model',
