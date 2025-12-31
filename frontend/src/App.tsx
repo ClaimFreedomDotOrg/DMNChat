@@ -52,11 +52,15 @@ const ChatView: React.FC = () => {
   // Update suggestions based on conversation state
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    const newSuggestions = getSuggestions({
+    const allSuggestions = getSuggestions({
       hasMessages: messages.length > 0,
       lastMessageRole: lastMessage?.role
     });
-    setSuggestions(newSuggestions);
+
+    // Limit to 3 suggestions on mobile, 5 on desktop
+    const isMobile = window.innerWidth < 640; // Tailwind sm breakpoint
+    const maxSuggestions = isMobile ? 3 : 5;
+    setSuggestions(allSuggestions.slice(0, maxSuggestions));
   }, [messages]);
 
   // Subscribe to context sources
