@@ -36,12 +36,14 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const isRecordingRef = useRef<boolean>(false);
   const speechDetectedRef = useRef<boolean>(false);
   const recordingStartTimeRef = useRef<number | null>(null);
+  const consecutiveSilenceChecksRef = useRef<number>(0);
 
   // Silence detection configuration
-  const SILENCE_THRESHOLD = 0.04; // Audio level threshold for silence (increased to be less sensitive)
-  const SPEECH_THRESHOLD = 0.03; // Audio level threshold to detect speech has started
-  const SILENCE_DURATION = 3500; // 3.5 seconds of silence triggers auto-submit (increased from 2s)
-  const MIN_RECORDING_DURATION = 1000; // Minimum 1 second before silence detection can trigger
+  const SILENCE_THRESHOLD = 0.06; // Audio level threshold for silence (increased significantly)
+  const SPEECH_THRESHOLD = 0.04; // Audio level threshold to detect speech has started
+  const SILENCE_DURATION = 4000; // 4 seconds of silence triggers auto-submit
+  const MIN_RECORDING_DURATION = 2000; // Minimum 2 seconds before silence detection can trigger
+  const CONSECUTIVE_SILENCE_CHECKS = 5; // Need 5 consecutive silent checks (500ms) to count as silence
 
   // Initialize audio context and cleanup on unmount
   useEffect(() => {
@@ -114,6 +116,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       speechDetectedRef.current = false;
       silenceStartTimeRef.current = null;
       recordingStartTimeRef.current = null;
+      consecutiveSilenceChecksRef.current = 0;
 
       console.log('Cleanup complete');
     };
@@ -169,6 +172,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       isRecordingRef.current = true;
       recordingStartTimeRef.current = Date.now(); // Track when recording started
       speechDetectedRef.current = false; // Reset speech detection flag
+      consecutiveSilenceChecksRef.current = 0; // Reset consecutive silence checks
       setError(null);
 
       // Start silence detection AFTER setting isRecordingRef to true
@@ -219,30 +223,36 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
       // Speech has been detected, now monitor for silence
       if (rms < SILENCE_THRESHOLD) {
-        // Silence detected
-        if (silenceStartTimeRef.current === null) {
-          silenceStartTimeRef.current = Date.now();
-          console.log('Silence started');
-        } else {
-          const silenceDuration = Date.now() - silenceStartTimeRef.current;
-          const recordingDuration = recordingStartTimeRef.current
-            ? Date.now() - recordingStartTimeRef.current
-            : 0;
+        // Potential silence detected
+        consecutiveSilenceChecksRef.current++;
 
-          // Only auto-submit if we've been recording for at least MIN_RECORDING_DURATION
-          if (recordingDuration >= MIN_RECORDING_DURATION && silenceDuration >= SILENCE_DURATION) {
-            // Auto-submit after silence duration
-            console.log('Silence duration reached - auto-submitting');
-            stopRecording();
-            return;
+        // Only start the silence timer after consecutive silent checks
+        if (consecutiveSilenceChecksRef.current >= CONSECUTIVE_SILENCE_CHECKS) {
+          if (silenceStartTimeRef.current === null) {
+            silenceStartTimeRef.current = Date.now();
+            console.log('Confirmed silence started after', CONSECUTIVE_SILENCE_CHECKS, 'checks');
+          } else {
+            const silenceDuration = Date.now() - silenceStartTimeRef.current;
+            const recordingDuration = recordingStartTimeRef.current
+              ? Date.now() - recordingStartTimeRef.current
+              : 0;
+
+            // Only auto-submit if we've been recording for at least MIN_RECORDING_DURATION
+            if (recordingDuration >= MIN_RECORDING_DURATION && silenceDuration >= SILENCE_DURATION) {
+              // Auto-submit after silence duration
+              console.log('Silence duration reached - auto-submitting after', silenceDuration, 'ms');
+              stopRecording();
+              return;
+            }
           }
         }
       } else {
-        // Audio detected, reset silence timer
-        if (silenceStartTimeRef.current !== null) {
-          console.log('Audio detected - resetting silence timer');
+        // Audio detected, reset silence timer and consecutive checks
+        if (silenceStartTimeRef.current !== null || consecutiveSilenceChecksRef.current > 0) {
+          console.log('Audio detected - resetting silence timer (was at', consecutiveSilenceChecksRef.current, 'checks)');
         }
         silenceStartTimeRef.current = null;
+        consecutiveSilenceChecksRef.current = 0;
       }
 
       // Continue monitoring
@@ -258,6 +268,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       silenceDetectionTimerRef.current = null;
     }
     silenceStartTimeRef.current = null;
+    consecutiveSilenceChecksRef.current = 0;
   };
 
   const cancelRecording = () => {
@@ -745,7 +756,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
             {!isRecording && !isProcessing && !isSpeaking && (
               <div className="text-slate-400 text-sm text-center">
                 <div>Tap the microphone to start speaking</div>
-                <div className="text-xs mt-1 text-slate-500">Speech will auto-submit after 2 seconds of silence</div>
+                <div className="text-xs mt-1 text-slate-500">Speech will auto-submit after 4 seconds of silence</div>
               </div>
             )}
           </div>
