@@ -133,7 +133,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     setError(null);
 
     // Generate unique ID with timestamp + random component
-    const userMsgId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const userMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
     const userMsg: Message = {
       id: userMsgId,
       role: 'user',
@@ -179,7 +179,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
           }
           
           // Add error message to local state (not saved to backend)
-          const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+          const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
           const errorMsg: Message = {
             id: errorMsgId,
             role: 'model',
@@ -192,7 +192,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       } else {
         // Guest mode - no backend call, show message immediately
         console.log('User not authenticated, showing guest mode message');
-        const guestMsgId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+        const guestMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
         const guestMsg: Message = {
           id: guestMsgId,
           role: 'model',
@@ -204,7 +204,7 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
     } catch (err: any) {
       console.error('Error sending message:', err);
       // Generate unique ID with timestamp + random component
-      const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const errorMsgId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
       const errorMsg: Message = {
         id: errorMsgId,
         role: 'model',
