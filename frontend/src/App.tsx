@@ -5,6 +5,7 @@ import MessageInput from './components/chat/MessageInput';
 import ChatHeader from './components/chat/ChatHeader';
 import ChatHistorySidebar from './components/chat/ChatHistorySidebar';
 import JourneySelector from './components/chat/JourneySelector';
+import SuggestionChips from './components/chat/SuggestionChips';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AuthModal from './components/auth/AuthModal';
 import { Repository } from './types';
@@ -12,6 +13,7 @@ import { useChat } from './hooks/useChat';
 import { useAuth } from './hooks/useAuth';
 import { signOut } from './services/authService';
 import { subscribeToContextSources } from './services/adminService';
+import { getSuggestions, getWelcomeSuggestions } from './utils/suggestionService';
 import { X } from 'lucide-react';
 
 // Chat View Component
@@ -24,6 +26,7 @@ const ChatView: React.FC = () => {
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
   const [journeySelectorOpen, setJourneySelectorOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<{ focus: () => void }>(null);
 
@@ -46,6 +49,16 @@ const ChatView: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  // Update suggestions based on conversation state
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    const newSuggestions = getSuggestions({
+      hasMessages: messages.length > 0,
+      lastMessageRole: lastMessage?.role
+    });
+    setSuggestions(newSuggestions);
+  }, [messages]);
+
   // Subscribe to context sources
   useEffect(() => {
     if (user) {
@@ -65,6 +78,12 @@ const ChatView: React.FC = () => {
     if (!isTouchDevice) {
       setTimeout(() => messageInputRef.current?.focus(), 0);
     }
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setInput(suggestion);
+    // Auto-send the suggestion
+    handleSendMessage(suggestion);
   };
 
   const handleSignOut = async () => {
@@ -212,7 +231,7 @@ const ChatView: React.FC = () => {
             {/* Empty state with journey selector button */}
             {messages.filter(m => m.role === 'user').length === 0 && !isTyping && user && (
               <div className="flex flex-col items-center justify-center min-h-full py-12">
-                <div className="max-w-md text-center space-y-6">
+                <div className="max-w-2xl text-center space-y-6 px-4">
                   <div className="w-16 h-16 mx-auto bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-900/20">
                     <span className="text-3xl text-white">🧭</span>
                   </div>
@@ -234,6 +253,22 @@ const ChatView: React.FC = () => {
                       Select a Journey
                     </button>
                   )}
+
+                  {/* Welcome suggestions */}
+                  <div className="pt-4">
+                    <p className="text-xs text-slate-500 mb-3">Try asking:</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {getWelcomeSuggestions().map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSelectSuggestion(suggestion)}
+                          className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/70 active:bg-slate-800 border border-slate-700/50 hover:border-sky-500/50 rounded-lg text-sm text-slate-300 hover:text-sky-400 transition-all touch-manipulation"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -255,6 +290,15 @@ const ChatView: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
         </div>
+
+        {/* Suggestion Chips - only show after user has sent at least one message */}
+        {user && suggestions.length > 0 && messages.filter(m => m.role === 'user').length > 0 && (
+          <SuggestionChips
+            suggestions={suggestions}
+            onSelectSuggestion={handleSelectSuggestion}
+            disabled={isTyping}
+          />
+        )}
 
         {/* Input Area */}
         <MessageInput
