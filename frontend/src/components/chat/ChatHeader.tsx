@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Sparkles, LogIn, LogOut, User as UserIcon, Menu, Compass } from 'lucide-react';
+import { Settings, Sparkles, LogIn, LogOut, User as UserIcon, Menu, Compass, Mic } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserProfile } from '@/types';
 import { useJourneys } from '@/hooks/useJourneys';
@@ -13,6 +13,7 @@ interface ChatHeaderProps {
   onSignOut: () => void;
   onOpenAdmin: () => void;
   onToggleHistory: () => void;
+  onVoiceClick?: () => void;
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -23,7 +24,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onSignIn,
   onSignOut,
   onOpenAdmin,
-  onToggleHistory
+  onToggleHistory,
+  onVoiceClick
 }) => {
   const isAdmin = userProfile?.role === 'admin';
   const { journeys } = useJourneys();
@@ -80,6 +82,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         {/* Auth button */}
         {user ? (
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            {/* Voice Conversation Button */}
+            {onVoiceClick && (
+              <button
+                onClick={onVoiceClick}
+                className="p-2 hover:bg-slate-800 rounded-md text-slate-400 hover:text-purple-400 transition-colors flex-shrink-0"
+                title="Voice conversation"
+                aria-label="Voice conversation"
+              >
+                <Mic size={18} className="sm:w-5 sm:h-5" />
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={onOpenAdmin}

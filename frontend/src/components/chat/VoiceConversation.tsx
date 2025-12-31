@@ -39,7 +39,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const SPEECH_THRESHOLD = 0.02; // Audio level threshold to detect speech has started
   const SILENCE_DURATION = 2000; // 2 seconds of silence triggers auto-submit
 
-  // Initialize audio context
+  // Initialize audio context and cleanup on unmount
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
@@ -59,9 +59,58 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       };
     }
 
+    // Cleanup function - critical for preventing memory leaks
     return () => {
-      audioContextRef.current?.close();
-      recognitionRef.current?.stop();
+      console.log('VoiceConversation component unmounting - cleaning up all resources');
+
+      // Stop and clean up media recorder
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        const stream = mediaRecorderRef.current.stream;
+        stream?.getTracks().forEach(track => {
+          track.stop();
+          console.log('Stopped media track:', track.kind);
+        });
+      }
+
+      // Stop silence detection timer
+      if (silenceDetectionTimerRef.current) {
+        clearTimeout(silenceDetectionTimerRef.current);
+        silenceDetectionTimerRef.current = null;
+      }
+
+      // Stop speech recognition
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Already stopped
+        }
+      }
+
+      // Stop any playing audio
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current.src = '';
+        audioElementRef.current = null;
+      }
+
+      // Cancel Web Speech API
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      // Close audio context
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
+
+      // Reset refs
+      isRecordingRef.current = false;
+      speechDetectedRef.current = false;
+      silenceStartTimeRef.current = null;
+
+      console.log('Cleanup complete');
     };
   }, []);
 
@@ -540,14 +589,47 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   };
 
   const handleEndCall = () => {
+    console.log('handleEndCall called - cleaning up');
+
+    // Stop silence detection
+    stopSilenceDetection();
+
+    // Stop recording if active
+    if (mediaRecorderRef.current && isRecordingRef.current) {
+      try {
+        mediaRecorderRef.current.stop();
+        const stream = mediaRecorderRef.current.stream;
+        stream?.getTracks().forEach(track => {
+          track.stop();
+          console.log('Stopped track on close:', track.kind);
+        });
+      } catch (e) {
+        console.log('MediaRecorder already stopped');
+      }
+    }
+    isRecordingRef.current = false;
+
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Already stopped
+      }
+    }
+
     // Stop Web Speech API
-    if (window.speechSynthesis) {
+    if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    stopRecording();
+
+    // Stop audio playback
     if (audioElementRef.current) {
       audioElementRef.current.pause();
+      audioElementRef.current.currentTime = 0;
     }
+
+    // Call parent's onClose
     onClose();
   };
 

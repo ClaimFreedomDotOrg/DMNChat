@@ -228,6 +228,7 @@ const ChatView: React.FC = () => {
           onSignOut={handleSignOut}
           onOpenAdmin={() => setAdminDashboardOpen(true)}
           onToggleHistory={() => setHistorySidebarOpen(!historySidebarOpen)}
+          onVoiceClick={handleVoiceClick}
         />
 
         {/* Error Display */}
@@ -343,7 +344,6 @@ const ChatView: React.FC = () => {
           value={input}
           onChange={setInput}
           onSend={handleSendMessage}
-          onVoiceClick={handleVoiceClick}
           disabled={isTyping}
         />
       </div>

@@ -248,9 +248,6 @@ Respond naturally and conversationally. Keep responses concise for voice interac
                   voiceName: "Charon" // Deep, authoritative male voice
                 }
               },
-              speakingRate: 1.0, // Normal speed for consistency
-              pitch: 0.0, // Neutral pitch for consistency
-              volumeGainDb: 0.0 // Normal volume for consistency
             }
           }
         });

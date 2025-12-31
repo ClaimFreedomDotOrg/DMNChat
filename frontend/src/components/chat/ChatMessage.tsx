@@ -1,6 +1,6 @@
 import React from 'react';
 import { Message as MessageType } from '@/types';
-import { User, Sparkles } from 'lucide-react';
+import { User, Sparkles, Mic } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
@@ -15,14 +15,26 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     <div className={`flex w-full py-6 px-4 ${isUser ? 'bg-slate-900/50' : ''}`}>
       <div className="flex max-w-4xl mx-auto gap-6 w-full">
         {/* Avatar */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isUser
-            ? 'bg-slate-700 text-slate-300'
-            : isError
-            ? 'bg-red-600 text-white'
-            : 'bg-sky-600 text-white'
-        }`}>
-          {isUser ? <User size={16} /> : <Sparkles size={16} />}
+        <div className="relative flex-shrink-0">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            isUser
+              ? 'bg-slate-700 text-slate-300'
+              : isError
+              ? 'bg-red-600 text-white'
+              : 'bg-sky-600 text-white'
+          }`}>
+            {isUser ? <User size={16} /> : <Sparkles size={16} />}
+          </div>
+
+          {/* Voice Message Badge */}
+          {message.isVoiceMessage && (
+            <div
+              className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-slate-300 rounded-full flex items-center justify-center border border-slate-400"
+              title="Voice Message"
+            >
+              <Mic size={10} className="text-slate-700" />
+            </div>
+          )}
         </div>
 
         {/* Message Content */}
