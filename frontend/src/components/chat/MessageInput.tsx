@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Send, Mic } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface MessageInputProps {
   value: string;
