@@ -185,8 +185,8 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   >
                     {/* Pin Icon - Overlay in bottom-right */}
                     {chat.isPinned && (
-                      <div 
-                        title="Pinned" 
+                      <div
+                        title="Pinned"
                         className="absolute bottom-2 right-2 z-10"
                       >
                         <Pin
