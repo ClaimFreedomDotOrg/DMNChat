@@ -39,12 +39,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const consecutiveSilenceChecksRef = useRef<number>(0);
   const isMountedRef = useRef<boolean>(true);
 
-  // Silence detection configuration
-  const SILENCE_THRESHOLD = 0.06; // Audio level threshold for silence (increased significantly)
-  const SPEECH_THRESHOLD = 0.04; // Audio level threshold to detect speech has started
-  const SILENCE_DURATION = 4000; // 4 seconds of silence triggers auto-submit
-  const MIN_RECORDING_DURATION = 2000; // Minimum 2 seconds before silence detection can trigger
-  const CONSECUTIVE_SILENCE_CHECKS = 5; // Need 5 consecutive silent checks (500ms) to count as silence
+  // Silence detection configuration - VERY conservative to avoid false positives
+  const SILENCE_THRESHOLD = 0.08; // Audio level threshold for silence (very high to be safe)
+  const SPEECH_THRESHOLD = 0.05; // Audio level threshold to detect speech has started
+  const SILENCE_DURATION = 5000; // 5 seconds of silence triggers auto-submit
+  const MIN_RECORDING_DURATION = 3000; // Minimum 3 seconds before silence detection can trigger
+  const CONSECUTIVE_SILENCE_CHECKS = 10; // Need 10 consecutive silent checks (1000ms) to count as silence
 
   // Initialize audio context and cleanup on unmount
   useEffect(() => {
@@ -211,8 +211,11 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       }
       const rms = Math.sqrt(sum / bufferLength);
 
-      // Log every time now for debugging
-      console.log('Audio RMS level:', rms.toFixed(4), 'Threshold:', SILENCE_THRESHOLD);
+      // Log only significant events, not every check
+      const shouldLog = consecutiveSilenceChecksRef.current === 0 || consecutiveSilenceChecksRef.current === CONSECUTIVE_SILENCE_CHECKS;
+      if (shouldLog) {
+        console.log('Audio RMS level:', rms.toFixed(4), 'Silence threshold:', SILENCE_THRESHOLD, 'Consecutive silence checks:', consecutiveSilenceChecksRef.current);
+      }
 
       // First, check if speech has been detected yet
       if (!speechDetectedRef.current) {
@@ -825,7 +828,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
             {!isRecording && !isProcessing && !isSpeaking && (
               <div className="text-slate-400 text-sm text-center">
                 <div>Tap the microphone to start speaking</div>
-                <div className="text-xs mt-1 text-slate-500">Speech will auto-submit after 4 seconds of silence</div>
+                <div className="text-xs mt-1 text-slate-500">Speech will auto-submit after 5 seconds of silence</div>
               </div>
             )}
           </div>
