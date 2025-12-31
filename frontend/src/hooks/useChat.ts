@@ -3,6 +3,8 @@ import { Message } from '@/types';
 import { useAuth } from './useAuth';
 import { createChat, getChat } from '@/services/chatService';
 import { sendMessageToAI, validateMessage, generateChatTitle } from '@/services/aiService';
+import { db } from '@/services/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 interface UseChatReturn {
   messages: Message[];
@@ -77,6 +79,45 @@ export const useChat = (initialChatId?: string): UseChatReturn => {
       setIsLoading(false);
     }
   };
+
+  // Real-time listener for messages
+  useEffect(() => {
+    if (!user || !chatId) return;
+
+    console.log('Setting up real-time listener for chat:', chatId);
+
+    const messagesRef = collection(db, 'users', user.uid, 'chats', chatId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const updatedMessages: Message[] = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        updatedMessages.push({
+          id: doc.id,
+          role: data.role,
+          text: data.text,
+          timestamp: data.timestamp?.toMillis() || Date.now(),
+          citations: data.citations,
+          isError: data.isError,
+          isVoiceMessage: data.isVoiceMessage,
+        });
+      });
+
+      // Only update if we have messages (avoid clearing welcome message)
+      if (updatedMessages.length > 0) {
+        setMessages(updatedMessages);
+      }
+    }, (error) => {
+      console.error('Error listening to messages:', error);
+    });
+
+    return () => {
+      console.log('Cleaning up real-time listener for chat:', chatId);
+      unsubscribe();
+    };
+  }, [user, chatId]);
 
   const sendMessage = useCallback(async (text: string, customJourneyId?: string) => {
     if (!text.trim() || isTyping) return;

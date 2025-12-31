@@ -2,7 +2,7 @@
  * Admin-related Cloud Functions
  */
 
-export { addContextSource } from "./addSource.js";
-export { removeContextSource } from "./removeSource.js";
-export { getSystemStats } from "./getStats.js";
-export { setAdminRole } from "./setAdminRole.js";
+export { addContextSource } from "./addSource";
+export { removeContextSource } from "./removeSource";
+export { getSystemStats } from "./getStats";
+export { setAdminRole } from "./setAdminRole";

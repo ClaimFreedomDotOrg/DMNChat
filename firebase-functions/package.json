@@ -2,7 +2,6 @@
   "name": "dmn-chat-functions",
   "description": "Cloud Functions for DMN Chat - RAG and Context Management",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",

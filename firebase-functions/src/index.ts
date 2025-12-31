@@ -14,7 +14,7 @@ import { initializeApp } from "firebase-admin/app";
 initializeApp();
 
 // Export individual function modules
-export { sendMessage, getChatHistory, streamResponse } from "./chat/index.js";
-export { indexRepository, searchContext, updateRepositoryCache } from "./context/index.js";
-export { addContextSource, removeContextSource, getSystemStats, setAdminRole } from "./admin/index.js";
-export { createUserProfile, deleteUserData, updateUserRole } from "./user/index.js";
+export { sendMessage, getChatHistory, streamResponse, sendVoiceMessage } from "./chat/index";
+export { indexRepository, searchContext, updateRepositoryCache } from "./context/index";
+export { addContextSource, removeContextSource, getSystemStats, setAdminRole } from "./admin/index";
+export { createUserProfile, deleteUserData, updateUserRole } from "./user/index";

@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Mic } from 'lucide-react';
 
 interface MessageInputProps {
   value: string;
   onChange: (value: string) => void;
   onSend: (message: string) => void;
+  onVoiceClick?: () => void;
   disabled?: boolean;
 }
 
@@ -13,7 +14,7 @@ export interface MessageInputRef {
 }
 
 const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
-  { value, onChange, onSend, disabled = false },
+  { value, onChange, onSend, onVoiceClick, disabled = false },
   ref
 ) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -62,14 +63,27 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>((
             rows={2}
             disabled={disabled}
           />
-          <button
-            onClick={() => handleSubmit()}
-            disabled={!value.trim() || disabled}
-            className="absolute right-2 top-1/2 -translate-y-1/2 sm:right-3 p-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-600 text-white rounded-lg disabled:opacity-50 disabled:bg-slate-700 disabled:cursor-not-allowed transition-all touch-manipulation"
-            aria-label="Send message"
-          >
-            <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
-          </button>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 sm:right-3 flex gap-1">
+            {onVoiceClick && (
+              <button
+                type="button"
+                onClick={onVoiceClick}
+                disabled={disabled}
+                className="p-2 bg-purple-600 hover:bg-purple-500 active:bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:bg-slate-700 disabled:cursor-not-allowed transition-all touch-manipulation"
+                aria-label="Voice conversation"
+              >
+                <Mic size={16} className="sm:w-[18px] sm:h-[18px]" />
+              </button>
+            )}
+            <button
+              onClick={() => handleSubmit()}
+              disabled={!value.trim() || disabled}
+              className="p-2 bg-sky-600 hover:bg-sky-500 active:bg-sky-600 text-white rounded-lg disabled:opacity-50 disabled:bg-slate-700 disabled:cursor-not-allowed transition-all touch-manipulation"
+              aria-label="Send message"
+            >
+              <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
+            </button>
+          </div>
         </div>
         <div className="text-center mt-1.5 sm:mt-2">
           <p className="text-[10px] text-slate-600 px-2">

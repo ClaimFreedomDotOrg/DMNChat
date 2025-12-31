@@ -6,6 +6,7 @@ export interface Message {
   timestamp: number;
   citations?: Citation[];
   isError?: boolean;
+  isVoiceMessage?: boolean; // True if message was sent via voice
 }
 
 export interface Citation {

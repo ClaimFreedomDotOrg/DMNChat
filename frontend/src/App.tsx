@@ -6,6 +6,7 @@ import ChatHeader from './components/chat/ChatHeader';
 import ChatHistorySidebar from './components/chat/ChatHistorySidebar';
 import JourneySelector from './components/chat/JourneySelector';
 import SuggestionChips from './components/chat/SuggestionChips';
+import VoiceConversation from './components/chat/VoiceConversation';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AuthModal from './components/auth/AuthModal';
 import { Repository } from './types';
@@ -14,6 +15,7 @@ import { useAuth } from './hooks/useAuth';
 import { signOut } from './services/authService';
 import { subscribeToContextSources } from './services/adminService';
 import { getSuggestions, getWelcomeSuggestions } from './utils/suggestionService';
+import { checkVoiceSupport } from './services/voiceService';
 import { X } from 'lucide-react';
 
 // Chat View Component
@@ -26,6 +28,7 @@ const ChatView: React.FC = () => {
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
   const [journeySelectorOpen, setJourneySelectorOpen] = useState(false);
+  const [voiceConversationOpen, setVoiceConversationOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<{ focus: () => void }>(null);
@@ -118,6 +121,22 @@ const ChatView: React.FC = () => {
     setHistorySidebarOpen(false);
   };
 
+  const handleVoiceClick = () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    // Check if browser supports voice features
+    const voiceSupport = checkVoiceSupport();
+    if (!voiceSupport.supported) {
+      alert(`Voice mode not supported: ${voiceSupport.missingFeatures.join(', ')}`);
+      return;
+    }
+
+    setVoiceConversationOpen(true);
+  };
+
   return (
     <div className="flex h-dvh w-full max-w-full bg-slate-950 text-slate-200 overflow-hidden relative pt-2 sm:pt-0">
       {/* Auth Modal */}
@@ -131,6 +150,20 @@ const ChatView: React.FC = () => {
         isOpen={adminDashboardOpen}
         onClose={() => setAdminDashboardOpen(false)}
       />
+
+      {/* Voice Conversation Modal */}
+      {voiceConversationOpen && (
+        <VoiceConversation
+          onClose={() => setVoiceConversationOpen(false)}
+          journeyId={journeyId}
+          onChatUpdated={(updatedChatId) => {
+            // Navigate to the chat that was updated by voice message
+            if (updatedChatId && updatedChatId !== chatId) {
+              navigate(`/chat/${updatedChatId}`);
+            }
+          }}
+        />
+      )}
 
       {/* Journey Selector Modal */}
       {journeySelectorOpen && (
@@ -310,6 +343,7 @@ const ChatView: React.FC = () => {
           value={input}
           onChange={setInput}
           onSend={handleSendMessage}
+          onVoiceClick={handleVoiceClick}
           disabled={isTyping}
         />
       </div>

@@ -2,6 +2,6 @@
  * User management Cloud Functions
  */
 
-export { createUserProfile } from "./createProfile.js";
-export { deleteUserData } from "./deleteUserData.js";
-export { updateUserRole } from "./updateUserRole.js";
+export { createUserProfile } from "./createProfile";
+export { deleteUserData } from "./deleteUserData";
+export { updateUserRole } from "./updateUserRole";
