@@ -37,6 +37,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const speechDetectedRef = useRef<boolean>(false);
   const recordingStartTimeRef = useRef<number | null>(null);
   const consecutiveSilenceChecksRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true);
 
   // Silence detection configuration
   const SILENCE_THRESHOLD = 0.06; // Audio level threshold for silence (increased significantly)
@@ -68,6 +69,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
     // Cleanup function - critical for preventing memory leaks
     return () => {
       console.log('VoiceConversation component unmounting - cleaning up all resources');
+
+      // Mark component as unmounted to prevent async operations from continuing
+      isMountedRef.current = false;
 
       // Stop and clean up media recorder
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -342,6 +346,12 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
         audioDataLength: result.audioData?.length,
         audioDataPreview: result.audioData?.substring(0, 50)
       });
+
+      // Only play audio if component is still mounted
+      if (!isMountedRef.current) {
+        console.log('Component unmounted, skipping audio playback');
+        return;
+      }
 
       // Play TTS audio if available, otherwise use Web Speech API
       if (result.audioData && !isMuted) {
@@ -679,6 +689,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
   const handleEndCall = () => {
     console.log('handleEndCall called - cleaning up');
+
+    // Mark component as unmounted to stop any ongoing processing
+    isMountedRef.current = false;
 
     // Stop silence detection
     stopSilenceDetection();
