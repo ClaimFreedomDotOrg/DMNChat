@@ -25,8 +25,16 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const [currentAudioData, setCurrentAudioData] = useState<string | null>(null);
   const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
 
-  // Track active chat ID - use local state so subsequent messages use the same chat
+  // Track active chat ID - use BOTH state (for re-renders) and ref (for callbacks)
+  // The ref is critical to avoid stale closures in processAudio
   const [activeChatId, setActiveChatId] = useState<string | undefined>(chatId);
+  const activeChatIdRef = useRef<string | undefined>(chatId);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+    console.log('VoiceConversation: activeChatIdRef updated to:', activeChatId);
+  }, [activeChatId]);
 
   // Sync activeChatId with chatId prop when it changes from parent
   useEffect(() => {
@@ -36,6 +44,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
     if (chatId !== undefined && chatId !== activeChatId) {
       console.log('VoiceConversation: Syncing activeChatId with chatId prop:', chatId);
       setActiveChatId(chatId);
+      activeChatIdRef.current = chatId;
     }
   }, [chatId, activeChatId]);
 
@@ -349,8 +358,10 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
     try {
       // Send audio to backend for processing with Gemini
-      console.log('Sending voice message with chatId:', activeChatId);
-      const result = await sendVoiceMessage(audioBlob, activeChatId);
+      // Use ref to get the LATEST chatId value (avoids stale closure issues)
+      const currentChatId = activeChatIdRef.current;
+      console.log('Sending voice message with chatId:', currentChatId);
+      const result = await sendVoiceMessage(audioBlob, currentChatId);
 
       setTranscript(result.transcript); // Show final transcript from backend
       setResponse(result.responseText);
@@ -358,8 +369,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
       // Update active chat ID for subsequent messages in this conversation
       if (result.chatId) {
-        console.log('Updating activeChatId from', activeChatId, 'to', result.chatId);
+        console.log('Updating activeChatId from', currentChatId, 'to', result.chatId);
         setActiveChatId(result.chatId);
+        activeChatIdRef.current = result.chatId; // Update ref immediately
 
         // Notify parent component that chat was updated
         if (onChatUpdated) {
