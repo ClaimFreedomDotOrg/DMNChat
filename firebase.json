@@ -8,6 +8,7 @@
       ],
       "source": "firebase-functions",
       "runtime": "nodejs20",
+      "codeLoadingStrategy": "legacy",
       "ignore": [
         "node_modules",
         ".git",

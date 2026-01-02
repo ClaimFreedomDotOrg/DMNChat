@@ -400,13 +400,21 @@ export const sendMessage = onCall<SendMessageData>(
         }
       });
 
-      // Save AI response
+      // Build citations from context chunks
+      const citations: Citation[] = contextChunks.map(chunk => ({
+        repoName: chunk.repoName,
+        filePath: chunk.filePath,
+        url: `https://github.com/${chunk.repoName}/blob/main/${chunk.filePath}`
+      }));
+
+      // Save AI response with citations
       const aiMessageRef = await chatRef
         .collection("messages")
         .add({
           role: "model",
           text: text,
-          timestamp: FieldValue.serverTimestamp()
+          timestamp: FieldValue.serverTimestamp(),
+          citations: citations.length > 0 ? citations : undefined
         });
 
       // Update chat metadata
@@ -415,13 +423,6 @@ export const sendMessage = onCall<SendMessageData>(
           updatedAt: FieldValue.serverTimestamp(),
           lastMessage: text.substring(0, 100)
         }, { merge: true });
-
-      // Build citations from context chunks
-      const citations: Citation[] = contextChunks.map(chunk => ({
-        repoName: chunk.repoName,
-        filePath: chunk.filePath,
-        url: `https://github.com/${chunk.repoName}/blob/main/${chunk.filePath}`
-      }));
 
       return {
         messageId: aiMessageRef.id,

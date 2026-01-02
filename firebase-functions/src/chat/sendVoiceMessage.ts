@@ -23,6 +23,89 @@ interface VoiceMessageResponse {
   chatId: string; // Return chatId so frontend can update active chat
 }
 
+interface Citation {
+  repoName: string;
+  filePath: string;
+  url: string;
+}
+
+interface ContextChunk {
+  repoName: string;
+  filePath: string;
+  content: string;
+  chunkIndex: number;
+}
+
+/**
+ * Retrieve relevant context chunks for a user query
+ */
+async function retrieveContext(
+  db: FirebaseFirestore.Firestore,
+  query: string,
+  maxChunks: number = 3 // Fewer chunks for voice to keep responses concise
+): Promise<ContextChunk[]> {
+  try {
+    // Simple keyword-based search
+    const queryLower = query.toLowerCase();
+    const keywords = queryLower.split(/\s+/).filter(w => w.length > 3);
+
+    if (keywords.length === 0) {
+      logger.info("No significant keywords in query");
+      return [];
+    }
+
+    // Get all chunks (TODO: optimize with embeddings and vector search)
+    const chunksSnapshot = await db.collection("chunks").limit(200).get();
+
+    if (chunksSnapshot.empty) {
+      logger.info("No chunks found in database");
+      return [];
+    }
+
+    const results: Array<{ chunk: ContextChunk; score: number }> = [];
+
+    // Score each chunk based on keyword matches
+    chunksSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const content = data.content.toLowerCase();
+
+      let score = 0;
+      for (const keyword of keywords) {
+        const matches = (content.match(new RegExp(keyword, "gi")) || []).length;
+        score += matches;
+      }
+
+      // Boost if exact phrase appears
+      if (content.includes(queryLower)) {
+        score += 10;
+      }
+
+      if (score > 0) {
+        results.push({
+          chunk: {
+            repoName: data.repoName,
+            filePath: data.filePath,
+            content: data.content,
+            chunkIndex: data.chunkIndex
+          },
+          score
+        });
+      }
+    });
+
+    // Sort by relevance and return top chunks
+    results.sort((a, b) => b.score - a.score);
+    const topChunks = results.slice(0, maxChunks).map(r => r.chunk);
+
+    logger.info(`Retrieved ${topChunks.length} relevant chunks for voice query: ${query.substring(0, 50)}`);
+
+    return topChunks;
+  } catch (error) {
+    logger.error("Error retrieving context:", error);
+    return []; // Return empty array on error, don't fail the whole request
+  }
+}
+
 /**
  * Send Voice Message Function
  * Processes audio input with Gemini multimodal API and returns TTS audio
@@ -185,13 +268,16 @@ You are guiding the user through this specific journey. Tailor your responses ac
         }
       }
 
-      // Step 6: Generate AI response
-      const prompt = `${systemPrompt}${journeyContext}
+      // Step 5.5: Retrieve relevant context from knowledge base
+      const contextChunks = await retrieveContext(db, transcript, 3); // Limit to 3 chunks for voice
 
-CONVERSATION HISTORY:
-${conversationHistory}
+      // Build context section if we have relevant chunks
+      const contextSection = contextChunks.length > 0
+        ? `\n\n# KNOWLEDGE BASE\n\nThe following excerpts from the Neuro-Gnostic framework are relevant to the user's question. Use this knowledge naturally in your response.\n\n${contextChunks.map((chunk, i) => `\n---\nSOURCE ${i + 1}: ${chunk.repoName}/${chunk.filePath}\n---\n${chunk.content}\n`).join("\n")}\n\n---\n`
+        : "";
 
-Respond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). Always finish complete thoughts - don't leave sentences incomplete.`;
+      // Step 6: Generate AI response with context
+      const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). Always finish complete thoughts - don't leave sentences incomplete.`;
 
       const result = await ai.generate({
         model: "googleai/gemini-2.5-flash",
@@ -208,13 +294,21 @@ Respond naturally and conversationally. Keep responses concise for voice interac
         responseLength: responseText.length,
       });
 
-      // Step 7: Save AI response
+      // Step 7: Build citations from context chunks
+      const citations: Citation[] = contextChunks.map(chunk => ({
+        repoName: chunk.repoName,
+        filePath: chunk.filePath,
+        url: `https://github.com/${chunk.repoName}/blob/main/${chunk.filePath}`
+      }));
+
+      // Step 7.5: Save AI response with citations
       const aiMessageRef = chatRef.collection("messages").doc();
       await aiMessageRef.set({
         role: "model",
         text: responseText,
         timestamp: FieldValue.serverTimestamp(),
         isVoiceMessage: true,
+        citations: citations.length > 0 ? citations : undefined,
       });
 
       // Step 8: Update chat metadata
