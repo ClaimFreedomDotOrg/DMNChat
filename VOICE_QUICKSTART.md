@@ -26,8 +26,8 @@ firebase-functions/src/chat/
 ### Documentation
 
 ```markdown
-VOICE_CONVERSATION.md              # Detailed documentation
-IMPLEMENTATION_SUMMARY.md          # This implementation overview
+VOICE_CONVERSATION.md              # Detailed implementation documentation
+VOICE_QUICKSTART.md                # This quick start guide
 ```
 
 ## 🚀 Deploy in 3 Steps
@@ -227,8 +227,7 @@ Ready for implementation:
 
 ## 📚 Learn More
 
-- **Full Documentation**: See `VOICE_CONVERSATION.md`
-- **Implementation Details**: See `IMPLEMENTATION_SUMMARY.md`
+- **Full Documentation**: See `VOICE_CONVERSATION.md` for detailed implementation
 - **Gemini Docs**: <https://ai.google.dev/docs>
 - **Web Audio API**: <https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API>
 
