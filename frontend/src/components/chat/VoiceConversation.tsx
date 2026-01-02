@@ -28,14 +28,16 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   // Track active chat ID - use local state so subsequent messages use the same chat
   const [activeChatId, setActiveChatId] = useState<string | undefined>(chatId);
 
-  // Sync activeChatId with chatId prop only on initial mount or when explicitly changed from outside
+  // Sync activeChatId with chatId prop when it changes from parent
   useEffect(() => {
-    // Only update if chatId prop changes AND we don't already have an activeChatId
-    // This prevents overwriting the chatId we just created
-    if (chatId && !activeChatId) {
+    // Update activeChatId when chatId prop changes (e.g., user selects a different chat)
+    // This allows the parent to control which chat voice messages go to
+    // Only update if it's actually different to avoid unnecessary re-renders
+    if (chatId !== undefined && chatId !== activeChatId) {
+      console.log('VoiceConversation: Syncing activeChatId with chatId prop:', chatId);
       setActiveChatId(chatId);
     }
-  }, [chatId]);
+  }, [chatId, activeChatId]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);

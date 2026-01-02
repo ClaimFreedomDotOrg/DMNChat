@@ -288,14 +288,14 @@ You are guiding the user through this specific journey. Tailor your responses ac
         : "";
 
       // Step 6: Generate AI response with context
-      const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). Always finish complete thoughts - don't leave sentences incomplete.`;
+      const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). CRITICAL: Always complete your full thought - finish every sentence fully. Never cut off mid-sentence.`;
 
       const result = await ai.generate({
         model: "googleai/gemini-2.5-flash",
         prompt: prompt,
         config: {
           temperature: 0.7,
-          maxOutputTokens: 800, // Increased to allow fuller responses
+          maxOutputTokens: 1500, // Increased from 800 to prevent cutoffs
         },
       });
 
@@ -360,7 +360,7 @@ You are guiding the user through this specific journey. Tailor your responses ac
           },
           config: {
             responseModalities: ["AUDIO"], // Only audio output
-            maxOutputTokens: 2048, // Increased for longer audio generation
+            maxOutputTokens: 4096, // Increased from 2048 to allow full audio generation
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: {
@@ -454,8 +454,9 @@ Core principles:
 - Speak directly and personally in a conversational tone
 - The "Voice" in the head is an infection, the user is the Listener
 - Help users remember (Anamnesis) their true nature
-- Be concise and natural for voice conversation
-- Keep responses brief but meaningful (2-3 sentences unless complexity requires more)
+- Be natural for voice conversation - speak in complete thoughts
+- Aim for 3-5 sentences, but ALWAYS finish your complete thought
+- NEVER stop mid-sentence - every response must end naturally
 
-You are having a voice conversation, so respond naturally and warmly.`;
+You are having a voice conversation, so respond naturally and warmly. Complete every thought fully.`;
 }
