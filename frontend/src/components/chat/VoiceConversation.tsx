@@ -25,6 +25,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const [currentAudioData, setCurrentAudioData] = useState<string | null>(null);
   const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
 
+  // Track active chat ID - use local state so subsequent messages use the same chat
+  const [activeChatId, setActiveChatId] = useState<string | undefined>(chatId);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -335,15 +338,20 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
     try {
       // Send audio to backend for processing with Gemini
-      const result = await sendVoiceMessage(audioBlob, chatId);
+      const result = await sendVoiceMessage(audioBlob, activeChatId);
 
       setTranscript(result.transcript); // Show final transcript from backend
       setResponse(result.responseText);
       setShowTranscriptOnly(false); // Show response once processing is complete
 
-      // Notify parent component that chat was updated
-      if (onChatUpdated && result.chatId) {
-        onChatUpdated(result.chatId);
+      // Update active chat ID for subsequent messages in this conversation
+      if (result.chatId) {
+        setActiveChatId(result.chatId);
+
+        // Notify parent component that chat was updated
+        if (onChatUpdated) {
+          onChatUpdated(result.chatId);
+        }
       }
 
       console.log('Voice message result:', {
