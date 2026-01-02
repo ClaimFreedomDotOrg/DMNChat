@@ -295,7 +295,7 @@ You are guiding the user through this specific journey. Tailor your responses ac
         prompt: prompt,
         config: {
           temperature: 0.7,
-          maxOutputTokens: 2048, // Increased to allow thorough explanations when requested
+          maxOutputTokens: 1536, // Increased to allow thorough explanations when requested
         },
       });
 
