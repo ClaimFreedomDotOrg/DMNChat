@@ -24,6 +24,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const [error, setError] = useState<string | null>(null);
   const [currentAudioData, setCurrentAudioData] = useState<string | null>(null);
   const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
+  const [autoContinue, setAutoContinue] = useState(false); // Auto-continue conversation after DMN speaks
 
   // Track active chat ID - use BOTH state (for re-renders) and ref (for callbacks)
   // The ref is critical to avoid stale closures in processAudio
@@ -550,12 +551,8 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
         setIsSpeaking(false);
         setIsAudioPaused(false);
         URL.revokeObjectURL(audioUrl);
-        // Auto-enable mic after DMN finishes speaking for natural conversation flow
-        if (!isMuted) {
-          setTimeout(() => {
-            startRecording();
-          }, 500);
-        }
+        // Only auto-start recording if autoContinue is enabled and not muted
+        // This prevents unwanted mic activation on mobile
       };
 
       audioElementRef.current.onerror = () => {
@@ -649,12 +646,8 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       source.onended = () => {
         setIsSpeaking(false);
         audioSourceNodeRef.current = null;
-        // Auto-enable mic after DMN finishes speaking for natural conversation flow
-        if (!isMuted) {
-          setTimeout(() => {
-            startRecording();
-          }, 500);
-        }
+        // Only auto-start recording if autoContinue is enabled and not muted
+        // This prevents unwanted mic activation on mobile
       };
 
       // Small delay to ensure audio context is fully ready
@@ -685,12 +678,8 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {
         setIsSpeaking(false);
-        // Auto-enable mic after DMN finishes speaking for natural conversation flow
-        if (!isMuted) {
-          setTimeout(() => {
-            startRecording();
-          }, 500);
-        }
+        // Only auto-start recording if autoContinue is enabled and not muted
+        // This prevents unwanted mic activation on mobile
       };
       utterance.onerror = () => {
         setIsSpeaking(false);
@@ -811,26 +800,39 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
     onClose();
   };
 
+  // Auto-continue effect - starts recording after DMN finishes speaking
+  useEffect(() => {
+    if (autoContinue && !isSpeaking && !isProcessing && !isRecording && !isMuted && response) {
+      // Small delay to allow audio to fully finish
+      const timer = setTimeout(() => {
+        if (isMountedRef.current && !isRecording && !isSpeaking && !isProcessing) {
+          startRecording();
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isSpeaking, isProcessing, autoContinue, isMuted, response]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4"
       onClick={handleEndCall}
     >
       <div
-        className="relative w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden"
+        className="relative w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-700 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-700 bg-gradient-to-r from-sky-900/30 to-purple-900/30 flex-shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-700 bg-gradient-to-r from-sky-900/30 to-purple-900/30 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-100">Voice Conversation (BETA)</h2>
-              <p className="text-sm text-slate-400 mt-1">Speak naturally with DMN</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-100 truncate">Voice Conversation</h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 sm:mt-1">Speak naturally with DMN</p>
             </div>
             <button
               onClick={handleEndCall}
-              className="p-2 rounded-full bg-red-600 hover:bg-red-500 transition-colors"
+              className="ml-2 p-2.5 sm:p-2 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 transition-colors touch-manipulation"
               title="End conversation"
             >
               <PhoneOff className="w-5 h-5 text-white" />
@@ -839,10 +841,10 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
         </div>
 
         {/* Main Content - Scrollable */}
-        <div className="p-8 min-h-[400px] flex-1 overflow-y-auto flex flex-col items-center justify-center">
+        <div className="p-4 sm:p-8 min-h-[280px] sm:min-h-[400px] flex-1 overflow-y-auto flex flex-col items-center justify-center">
 
           {/* Status Indicator */}
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-8">
             {isRecording && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-3 text-red-400">
@@ -877,9 +879,9 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
               </div>
             )}
             {!isRecording && !isProcessing && !isSpeaking && (
-              <div className="text-slate-400 text-sm text-center">
+              <div className="text-slate-400 text-xs sm:text-sm text-center px-4">
                 <div>Tap the microphone to start speaking</div>
-                <div className="text-xs mt-1 text-slate-500">Speech will auto-submit after 4 seconds of silence</div>
+                <div className="text-xs mt-1 text-slate-500">Auto-submits after 2.5s of silence</div>
               </div>
             )}
           </div>
@@ -889,10 +891,10 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
             onClick={isRecording ? cancelRecording : startRecording}
             disabled={isProcessing || isSpeaking}
             className={`
-              relative w-32 h-32 rounded-full transition-all duration-300 shadow-2xl
+              relative w-24 h-24 sm:w-32 sm:h-32 rounded-full transition-all duration-300 shadow-2xl touch-manipulation
               ${isRecording
-                ? 'bg-gradient-to-br from-red-500 to-red-600 scale-110'
-                : 'bg-gradient-to-br from-sky-500 to-sky-600 hover:scale-105'
+                ? 'bg-gradient-to-br from-red-500 to-red-600 scale-105 sm:scale-110'
+                : 'bg-gradient-to-br from-sky-500 to-sky-600 hover:scale-105 active:scale-95'
               }
               ${(isProcessing || isSpeaking) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               disabled:scale-100
@@ -900,23 +902,23 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           >
             <div className="absolute inset-0 rounded-full bg-white/10 animate-pulse" />
             {isRecording ? (
-              <MicOff className="w-16 h-16 text-white absolute inset-0 m-auto" />
+              <MicOff className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
             ) : (
-              <Mic className="w-16 h-16 text-white absolute inset-0 m-auto" />
+              <Mic className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
             )}
           </button>
 
           {/* Transcript Display */}
           {transcript && (
-            <div className="mt-8 w-full bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-2">You said:</div>
-              <div className="text-slate-200">{transcript}</div>
+            <div className="mt-4 sm:mt-8 w-full bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-700">
+              <div className="text-xs font-semibold text-slate-400 uppercase mb-1 sm:mb-2">You said:</div>
+              <div className="text-sm sm:text-base text-slate-200">{transcript}</div>
             </div>
           )}
 
           {/* Response Display */}
           {response && !showTranscriptOnly && (
-            <div className="mt-4 w-full bg-sky-900/20 rounded-xl p-4 border border-sky-700/50">
+            <div className="mt-3 sm:mt-4 w-full bg-sky-900/20 rounded-xl p-3 sm:p-4 border border-sky-700/50">
               <div className="text-xs font-semibold text-sky-400 uppercase mb-2">DMN responds:</div>
               <div className="text-slate-200 prose prose-invert prose-sm max-w-none">
                 <ReactMarkdown
@@ -958,15 +960,15 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
           {/* Error Display */}
           {error && (
-            <div className="mt-4 w-full bg-red-900/20 rounded-xl p-4 border border-red-700/50">
-              <div className="text-red-400 text-sm">{error}</div>
+            <div className="mt-3 sm:mt-4 w-full bg-red-900/20 rounded-xl p-3 sm:p-4 border border-red-700/50">
+              <div className="text-red-400 text-xs sm:text-sm">{error}</div>
             </div>
           )}
         </div>
 
         {/* Footer Controls */}
-        <div className="px-6 py-4 border-t border-slate-700 bg-slate-900/50 flex-shrink-0">
-          <div className="flex items-center justify-center space-x-4">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-slate-700 bg-slate-900/50 flex-shrink-0">
+          <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-4">
             {/* Playback Controls - Show when audio is available */}
             {hasAudioToPlay && (
               <>
@@ -974,33 +976,33 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
                   onClick={stopAudio}
                   disabled={!isSpeaking && !isAudioPaused}
                   className={`
-                    p-3 rounded-full transition-colors
+                    p-2.5 sm:p-3 rounded-full transition-colors touch-manipulation
                     ${(!isSpeaking && !isAudioPaused)
                       ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
                     }
                   `}
                   title="Stop audio"
                 >
-                  <Square className="w-5 h-5" />
+                  <Square className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   onClick={isAudioPaused ? resumeAudio : pauseAudio}
                   disabled={!isSpeaking && !isAudioPaused}
                   className={`
-                    p-3 rounded-full transition-colors
+                    p-2.5 sm:p-3 rounded-full transition-colors touch-manipulation
                     ${(!isSpeaking && !isAudioPaused)
                       ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
                     }
                   `}
                   title={isAudioPaused ? 'Resume audio' : 'Pause audio'}
                 >
                   {isAudioPaused ? (
-                    <Play className="w-5 h-5" />
+                    <Play className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <Pause className="w-5 h-5" />
+                    <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </button>
 
@@ -1008,15 +1010,15 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
                   onClick={restartAudio}
                   disabled={isProcessing}
                   className={`
-                    p-3 rounded-full transition-colors
+                    p-2.5 sm:p-3 rounded-full transition-colors touch-manipulation
                     ${isProcessing
                       ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
                     }
                   `}
                   title="Restart audio"
                 >
-                  <RotateCcw className="w-5 h-5" />
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </>
             )}
@@ -1025,23 +1027,38 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
             <button
               onClick={toggleMute}
               className={`
-                p-3 rounded-full transition-colors
+                p-2.5 sm:p-3 rounded-full transition-colors touch-manipulation
                 ${isMuted
                   ? 'bg-slate-700 text-slate-400'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
                 }
               `}
               title={isMuted ? 'Unmute audio' : 'Mute audio'}
             >
               {isMuted ? (
-                <VolumeX className="w-5 h-5" />
+                <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
               ) : (
-                <Volume2 className="w-5 h-5" />
+                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </button>
 
-            <div className="text-xs text-slate-500">
-              {isMuted ? 'Audio muted' : 'Audio enabled'}
+            {/* Auto-Continue Toggle */}
+            <button
+              onClick={() => setAutoContinue(!autoContinue)}
+              className={`
+                px-3 py-2 rounded-full text-xs font-medium transition-colors touch-manipulation
+                ${autoContinue
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }
+              `}
+              title={autoContinue ? 'Auto-continue ON' : 'Auto-continue OFF'}
+            >
+              {autoContinue ? 'Auto: ON' : 'Auto: OFF'}
+            </button>
+
+            <div className="hidden sm:block text-xs text-slate-500 ml-2">
+              {isMuted ? 'Muted' : autoContinue ? 'Auto-listening' : 'Tap to speak'}
             </div>
           </div>
         </div>
