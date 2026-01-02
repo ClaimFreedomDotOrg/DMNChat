@@ -28,6 +28,15 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   // Track active chat ID - use local state so subsequent messages use the same chat
   const [activeChatId, setActiveChatId] = useState<string | undefined>(chatId);
 
+  // Sync activeChatId with chatId prop only on initial mount or when explicitly changed from outside
+  useEffect(() => {
+    // Only update if chatId prop changes AND we don't already have an activeChatId
+    // This prevents overwriting the chatId we just created
+    if (chatId && !activeChatId) {
+      setActiveChatId(chatId);
+    }
+  }, [chatId]);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -338,6 +347,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
     try {
       // Send audio to backend for processing with Gemini
+      console.log('Sending voice message with chatId:', activeChatId);
       const result = await sendVoiceMessage(audioBlob, activeChatId);
 
       setTranscript(result.transcript); // Show final transcript from backend
@@ -346,6 +356,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
 
       // Update active chat ID for subsequent messages in this conversation
       if (result.chatId) {
+        console.log('Updating activeChatId from', activeChatId, 'to', result.chatId);
         setActiveChatId(result.chatId);
 
         // Notify parent component that chat was updated
