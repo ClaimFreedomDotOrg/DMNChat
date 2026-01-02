@@ -291,11 +291,13 @@ You are guiding the user through this specific journey. Tailor your responses ac
       const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. For simple questions, keep responses concise (2-4 sentences). For complex topics or when the user explicitly asks for thorough/detailed explanations, provide complete, comprehensive responses - take as much space as needed to fully address the question. CRITICAL: Always complete your full thought - finish EVERY sentence fully. Never cut off mid-sentence or mid-thought.`;
 
       const result = await ai.generate({
-        model: "googleai/gemini-2.5-flash",
+        // Using 2.0-flash instead of 2.5-flash because 2.5 "thinking" models
+        // consume tokens on internal reasoning, causing unexpected truncation
+        model: "googleai/gemini-2.0-flash",
         prompt: prompt,
         config: {
           temperature: 0.7,
-          maxOutputTokens: 1536, // Increased to allow thorough explanations when requested
+          maxOutputTokens: 1024,
         },
       });
 
