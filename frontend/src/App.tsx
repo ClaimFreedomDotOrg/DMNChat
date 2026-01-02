@@ -42,6 +42,10 @@ const ChatView: React.FC = () => {
     if (activeChatId && !chatId) {
       navigate(`/chat/${activeChatId}`, { replace: true });
     }
+    // If we had a chatId in URL but activeChatId is now null (chat not found), clear the URL
+    else if (chatId && !activeChatId) {
+      navigate('/', { replace: true });
+    }
   }, [activeChatId, chatId, navigate]);
 
   const scrollToBottom = () => {
