@@ -16,6 +16,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isSoundDetected, setIsSoundDetected] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
   const [hasAudioToPlay, setHasAudioToPlay] = useState(false);
   const [transcript, setTranscript] = useState<string>('');
@@ -40,11 +41,11 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
   const isMountedRef = useRef<boolean>(true);
 
   // Silence detection configuration
-  const SILENCE_THRESHOLD = 0.06; // Audio level threshold for silence (increased significantly)
-  const SPEECH_THRESHOLD = 0.04; // Audio level threshold to detect speech has started
-  const SILENCE_DURATION = 4000; // 4 seconds of silence triggers auto-submit
-  const MIN_RECORDING_DURATION = 2000; // Minimum 2 seconds before silence detection can trigger
-  const CONSECUTIVE_SILENCE_CHECKS = 5; // Need 5 consecutive silent checks (500ms) to count as silence
+  const SILENCE_THRESHOLD = 0.02; // Audio level threshold for silence (lower = more sensitive to actual silence)
+  const SPEECH_THRESHOLD = 0.08; // Audio level threshold to detect speech has started (higher = less sensitive to background noise)
+  const SILENCE_DURATION = 2500; // 2.5 seconds of silence triggers auto-submit
+  const MIN_RECORDING_DURATION = 1000; // Minimum 1 second before silence detection can trigger
+  const CONSECUTIVE_SILENCE_CHECKS = 8; // Need 8 consecutive silent checks (800ms) to count as silence
 
   // Initialize audio context and cleanup on unmount
   useEffect(() => {
@@ -211,6 +212,10 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
       }
       const rms = Math.sqrt(sum / bufferLength);
 
+      // Update sound detection indicator
+      const soundDetected = rms > SPEECH_THRESHOLD;
+      setIsSoundDetected(soundDetected);
+
       // Log every time now for debugging
       console.log('Audio RMS level:', rms.toFixed(4), 'Threshold:', SILENCE_THRESHOLD);
 
@@ -273,6 +278,7 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
     }
     silenceStartTimeRef.current = null;
     consecutiveSilenceChecksRef.current = 0;
+    setIsSoundDetected(false);
   };
 
   const cancelRecording = () => {
@@ -805,9 +811,24 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           {/* Status Indicator */}
           <div className="mb-8">
             {isRecording && (
-              <div className="flex items-center space-x-3 text-red-400">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">Recording...</span>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3 text-red-400">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Recording...</span>
+                </div>
+                {/* Sound Detection Indicator */}
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full transition-all duration-150 ${
+                    isSoundDetected
+                      ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]'
+                      : 'bg-slate-600'
+                  }`}></div>
+                  <span className={`text-xs transition-colors duration-150 ${
+                    isSoundDetected ? 'text-green-400' : 'text-slate-500'
+                  }`}>
+                    {isSoundDetected ? 'Sound detected' : 'Listening...'}
+                  </span>
+                </div>
               </div>
             )}
             {isProcessing && (

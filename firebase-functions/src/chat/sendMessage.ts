@@ -408,14 +408,25 @@ export const sendMessage = onCall<SendMessageData>(
       }));
 
       // Save AI response with citations
+      const messageData: {
+        role: string;
+        text: string;
+        timestamp: FirebaseFirestore.FieldValue;
+        citations?: Citation[];
+      } = {
+        role: "model",
+        text: text,
+        timestamp: FieldValue.serverTimestamp(),
+      };
+
+      // Only add citations field if there are actual citations
+      if (citations.length > 0) {
+        messageData.citations = citations;
+      }
+
       const aiMessageRef = await chatRef
         .collection("messages")
-        .add({
-          role: "model",
-          text: text,
-          timestamp: FieldValue.serverTimestamp(),
-          citations: citations.length > 0 ? citations : undefined
-        });
+        .add(messageData);
 
       // Update chat metadata
       await chatRef

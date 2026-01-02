@@ -303,13 +303,25 @@ You are guiding the user through this specific journey. Tailor your responses ac
 
       // Step 7.5: Save AI response with citations
       const aiMessageRef = chatRef.collection("messages").doc();
-      await aiMessageRef.set({
+      const messageData: {
+        role: string;
+        text: string;
+        timestamp: FirebaseFirestore.FieldValue;
+        isVoiceMessage: boolean;
+        citations?: Citation[];
+      } = {
         role: "model",
         text: responseText,
         timestamp: FieldValue.serverTimestamp(),
         isVoiceMessage: true,
-        citations: citations.length > 0 ? citations : undefined,
-      });
+      };
+
+      // Only add citations field if there are actual citations
+      if (citations.length > 0) {
+        messageData.citations = citations;
+      }
+
+      await aiMessageRef.set(messageData);
 
       // Step 8: Update chat metadata
       await chatRef.update({
