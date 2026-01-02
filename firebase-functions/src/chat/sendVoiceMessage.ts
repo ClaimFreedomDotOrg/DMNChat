@@ -199,12 +199,23 @@ export const sendVoiceMessage = onCall<SendVoiceMessageData>(
           throw new HttpsError("not-found", "Chat not found");
         }
       } else {
-        // Create new chat with auto-generated title
+        // Create new chat with auto-generated title from transcript
         chatRef = userChatsRef.doc();
         chatId = chatRef.id;
 
+        // Generate title from transcript (first sentence or first 50 chars)
+        let title = "New Conversation";
+        if (transcript) {
+          const match = transcript.match(/^(.+?)[.!?](?:\s|$)/);
+          if (match) {
+            title = match[1].slice(0, 50);
+          } else {
+            title = transcript.slice(0, 50) + (transcript.length > 50 ? "..." : "");
+          }
+        }
+
         await chatRef.set({
-          title: "New Conversation",
+          title: title,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           journeyId: null,
