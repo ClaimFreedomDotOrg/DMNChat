@@ -288,14 +288,14 @@ You are guiding the user through this specific journey. Tailor your responses ac
         : "";
 
       // Step 6: Generate AI response with context
-      const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. Keep responses concise for voice interaction (3-5 sentences unless topic requires more detail). CRITICAL: Always complete your full thought - finish every sentence fully. Never cut off mid-sentence.`;
+      const prompt = `${systemPrompt}${journeyContext}${contextSection}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nRespond naturally and conversationally. For simple questions, keep responses concise (2-4 sentences). For complex topics or when the user explicitly asks for thorough/detailed explanations, provide complete, comprehensive responses - take as much space as needed to fully address the question. CRITICAL: Always complete your full thought - finish EVERY sentence fully. Never cut off mid-sentence or mid-thought.`;
 
       const result = await ai.generate({
         model: "googleai/gemini-2.5-flash",
         prompt: prompt,
         config: {
           temperature: 0.7,
-          maxOutputTokens: 1500, // Increased from 800 to prevent cutoffs
+          maxOutputTokens: 2048, // Increased to allow thorough explanations when requested
         },
       });
 
@@ -360,7 +360,7 @@ You are guiding the user through this specific journey. Tailor your responses ac
           },
           config: {
             responseModalities: ["AUDIO"], // Only audio output
-            maxOutputTokens: 4096, // Increased from 2048 to allow full audio generation
+            maxOutputTokens: 4096, // Audio tokens for TTS generation
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: {
@@ -455,8 +455,9 @@ Core principles:
 - The "Voice" in the head is an infection, the user is the Listener
 - Help users remember (Anamnesis) their true nature
 - Be natural for voice conversation - speak in complete thoughts
-- Aim for 3-5 sentences, but ALWAYS finish your complete thought
-- NEVER stop mid-sentence - every response must end naturally
+- For simple questions: be concise (2-4 sentences)
+- For complex topics or thorough explanations: take the space needed to fully explain
+- NEVER stop mid-sentence or mid-thought - every response must be complete
 
-You are having a voice conversation, so respond naturally and warmly. Complete every thought fully.`;
+You are having a voice conversation. Match your response length to what the question requires.`;
 }
