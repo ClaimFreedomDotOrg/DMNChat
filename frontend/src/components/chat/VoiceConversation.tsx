@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, PhoneOff, Play, Pause, RotateCcw, Square } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, PhoneOff, Play, Pause, RotateCcw, Square, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { sendVoiceMessage } from '@/services/voiceService';
 import ReactMarkdown from 'react-markdown';
@@ -887,26 +887,39 @@ const VoiceConversation: React.FC<VoiceConversationProps> = ({ onClose, chatId, 
           </div>
 
           {/* Microphone Button */}
-          <button
-            onClick={isRecording ? cancelRecording : startRecording}
-            disabled={isProcessing || isSpeaking}
-            className={`
-              relative w-24 h-24 sm:w-32 sm:h-32 rounded-full transition-all duration-300 shadow-2xl touch-manipulation
-              ${isRecording
-                ? 'bg-gradient-to-br from-red-500 to-red-600 scale-105 sm:scale-110'
-                : 'bg-gradient-to-br from-sky-500 to-sky-600 hover:scale-105 active:scale-95'
-              }
-              ${(isProcessing || isSpeaking) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-              disabled:scale-100
-            `}
-          >
-            <div className="absolute inset-0 rounded-full bg-white/10 animate-pulse" />
-            {isRecording ? (
-              <MicOff className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
-            ) : (
-              <Mic className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
+          <div className="flex items-center gap-4">
+            <button
+              onClick={isRecording ? cancelRecording : startRecording}
+              disabled={isProcessing || isSpeaking}
+              className={`
+                relative w-24 h-24 sm:w-32 sm:h-32 rounded-full transition-all duration-300 shadow-2xl touch-manipulation
+                ${isRecording
+                  ? 'bg-gradient-to-br from-red-500 to-red-600 scale-105 sm:scale-110'
+                  : 'bg-gradient-to-br from-sky-500 to-sky-600 hover:scale-105 active:scale-95'
+                }
+                ${(isProcessing || isSpeaking) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                disabled:scale-100
+              `}
+            >
+              <div className="absolute inset-0 rounded-full bg-white/10 animate-pulse" />
+              {isRecording ? (
+                <MicOff className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
+              ) : (
+                <Mic className="w-10 h-10 sm:w-16 sm:h-16 text-white absolute inset-0 m-auto" />
+              )}
+            </button>
+
+            {/* Manual Submit Button - Shows while recording */}
+            {isRecording && (
+              <button
+                onClick={stopRecording}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 active:from-green-600 active:to-green-700 transition-all duration-200 shadow-xl touch-manipulation flex items-center justify-center"
+                title="Submit recording"
+              >
+                <Send className="w-7 h-7 sm:w-9 sm:h-9 text-white" />
+              </button>
             )}
-          </button>
+          </div>
 
           {/* Transcript Display */}
           {transcript && (
