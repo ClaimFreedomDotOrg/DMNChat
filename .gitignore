@@ -127,3 +127,4 @@ docs/.vuepress/dist/
 *.bak
 *.orig
 sources/
+frontend/dist/
