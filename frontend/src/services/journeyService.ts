@@ -62,13 +62,21 @@ export function subscribeToActiveJourneys(
   const journeysRef = collection(db, 'journeys');
   const q = query(journeysRef, where('isActive', '==', true), orderBy('order', 'asc'));
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const journeys = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Journey[];
-    callback(journeys);
-  });
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const journeys = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Journey[];
+      callback(journeys);
+    },
+    (error) => {
+      console.error('Error subscribing to active journeys:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 
   return unsubscribe;
 }
@@ -82,13 +90,21 @@ export function subscribeToAllJourneys(
   const journeysRef = collection(db, 'journeys');
   const q = query(journeysRef, orderBy('order', 'asc'));
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const journeys = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Journey[];
-    callback(journeys);
-  });
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const journeys = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Journey[];
+      callback(journeys);
+    },
+    (error) => {
+      console.error('Error subscribing to all journeys:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 
   return unsubscribe;
 }
