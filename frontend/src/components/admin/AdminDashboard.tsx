@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Database, LayoutDashboard, Settings, X, AlertTriangle, Compass, Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isSystemConfigInitialized } from '@/services/adminService';
@@ -58,11 +58,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     { id: 'config', label: 'System Config', icon: Settings },
   ] as const;
 
-  const handleNavItemClick = (panelId: Panel) => {
+  const handleNavItemClick = useCallback((panelId: Panel) => {
     setActivePanel(panelId);
     // Close sidebar on mobile after selecting an item
     setIsSidebarOpen(false);
-  };
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -72,7 +76,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-3">
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={toggleSidebar}
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-slate-200 md:hidden"
               aria-label="Toggle navigation"
             >
@@ -98,7 +102,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
           {isSidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-10 md:hidden"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={toggleSidebar}
             />
           )}
 
