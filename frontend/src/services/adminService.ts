@@ -157,23 +157,31 @@ export const subscribeToContextSources = (
 ): (() => void) => {
   const sourcesRef = collection(db, 'contextSources');
 
-  return onSnapshot(sourcesRef, (snapshot) => {
-    const repos = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: `${data.config.owner}/${data.config.repo}`,
-        url: `https://github.com/${data.config.owner}/${data.config.repo}`,
-        branch: data.config.branch,
-        status: data.status.state,
-        progress: data.status.progress,
-        fileCount: data.stats.fileCount,
-        chunkCount: data.stats.chunkCount,
-        error: data.status.error
-      } as Repository;
-    });
-    callback(repos);
-  });
+  return onSnapshot(
+    sourcesRef,
+    (snapshot) => {
+      const repos = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: `${data.config.owner}/${data.config.repo}`,
+          url: `https://github.com/${data.config.owner}/${data.config.repo}`,
+          branch: data.config.branch,
+          status: data.status.state,
+          progress: data.status.progress,
+          fileCount: data.stats.fileCount,
+          chunkCount: data.stats.chunkCount,
+          error: data.status.error
+        } as Repository;
+      });
+      callback(repos);
+    },
+    (error) => {
+      console.error('Error subscribing to context sources:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 };
 
 /**
