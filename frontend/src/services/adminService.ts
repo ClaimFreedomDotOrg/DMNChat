@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, onSnapshot, serverTimestamp, FirestoreError, QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from './firebase';
 import { Repository, SystemConfig } from '@/types';
@@ -96,7 +96,7 @@ export const addContextSource = async (repoUrl: string, branch: string = 'main')
       sourceId: sourceDoc.id,
       repoUrl: `https://github.com/${parsed.owner}/${parsed.repo}`,
       branch: finalBranch
-    }).catch(error => {
+    }).catch((error: Error) => {
       console.error('Error triggering indexing:', error);
     });
 
@@ -129,7 +129,7 @@ export const getContextSources = async (): Promise<Repository[]> => {
     const sourcesRef = collection(db, 'contextSources');
     const snapshot = await getDocs(sourcesRef);
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -159,8 +159,8 @@ export const subscribeToContextSources = (
 
   return onSnapshot(
     sourcesRef,
-    (snapshot) => {
-      const repos = snapshot.docs.map(doc => {
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const repos = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -176,7 +176,7 @@ export const subscribeToContextSources = (
       });
       callback(repos);
     },
-    (error) => {
+    (error: FirestoreError) => {
       console.error('Error subscribing to context sources:', error);
       // Return empty array on error to prevent component crashes
       callback([]);
