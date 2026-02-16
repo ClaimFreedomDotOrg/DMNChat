@@ -21,6 +21,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, profile } = useAuth();
 
+  // All hooks must be called before any conditional returns
+  const handleNavItemClick = useCallback((panelId: Panel) => {
+    setActivePanel(panelId);
+    // Close sidebar on mobile after selecting an item
+    setIsSidebarOpen(false);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
+
   // Check if system config is initialized
   useEffect(() => {
     if (isOpen && profile?.role === 'admin') {
@@ -28,6 +39,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, profile?.role]);
 
+  // Early returns after all hooks
   if (!isOpen) return null;
 
   // Check if user is admin
@@ -57,16 +69,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'config', label: 'System Config', icon: Settings },
   ] as const;
-
-  const handleNavItemClick = useCallback((panelId: Panel) => {
-    setActivePanel(panelId);
-    // Close sidebar on mobile after selecting an item
-    setIsSidebarOpen(false);
-  }, []);
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
-  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
