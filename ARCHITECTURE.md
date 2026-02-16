@@ -1,8 +1,8 @@
 # DMN Chat - System Architecture Document
 
-> **Document Version**: 1.0  
-> **Last Updated**: December 28, 2025  
-> **Status**: Planning/Design Phase
+> **Document Version**: 2.0  
+> **Last Updated**: February 16, 2026  
+> **Status**: Active Development
 
 ## Table of Contents
 
@@ -29,12 +29,15 @@
 
 ### Key Features
 
-- **Intelligent Conversational AI**: Powered by Google Gemini with context-aware responses
+- **Intelligent Conversational AI**: Powered by Google Gemini 2.0 Flash with context-aware responses
 - **Dynamic Context Loading**: Admin-configured GitHub repository sources
-- **Semantic Search & RAG**: Vector-based semantic indexing for relevant context retrieval
+- **Keyword-Based Context Retrieval**: Intelligent chunking and keyword search for relevant context (vector embeddings planned)
+- **Journey System**: Guided conversation paths with customizable system prompts
+- **Member Tiers**: Configurable usage limits and access levels
+- **Voice Conversation**: Speech-to-text and text-to-speech support via Gemini
 - **User Authentication**: Firebase Authentication for user management
-- **Auto-save Chat History**: Persistent conversation storage
-- **Admin Dashboard**: Configuration interface for managing context sources
+- **Auto-save Chat History**: Persistent conversation storage with subcollections
+- **Admin Dashboard**: Configuration interface for managing context sources, journeys, and member tiers
 - **Serverless Architecture**: Cloudflare Pages frontend + Firebase backend
 - **Scalable & Cost-Effective**: Pay-per-use model with optimal caching strategies
 
@@ -182,17 +185,20 @@ Language: TypeScript
 ### AI & ML
 
 ```yaml
-LLM: Google Gemini (gemini-2.5-flash or gemini-2.5-pro)
-Embeddings: Gemini Embedding API or Vertex AI
-Vector Search: Custom implementation or Firestore Vector Search (Preview)
+LLM: Google Gemini 2.0 Flash Experimental (gemini-2.0-flash-exp)
+AI Framework: Genkit (@genkit-ai/google-genai, @genkit-ai/firebase)
+Voice: Gemini 2.5 Flash with TTS preview
+Context Retrieval: Keyword-based search (vector embeddings planned for future)
+Search Implementation: Custom keyword matching with frequency scoring
 ```
 
 ### External APIs
 
 ```yaml
-GitHub API: v3/v4 REST/GraphQL
-Gemini API: @google/generative-ai SDK
-Firebase SDKs: Latest stable versions
+GitHub API: v3 REST (GitHub Tree API for repository indexing)
+Gemini API: Via Genkit framework
+Firebase SDKs: v13+ for Admin, v10+ for client
+Axios: HTTP client for GitHub API calls
 ```
 
 ### Development Tools
@@ -341,207 +347,596 @@ systemConfig/
 
 ### Frontend Components
 
-#### Core Components
+**Location**: `frontend/src/components/`
 
-##### 1. App.tsx
+#### Core Chat Components
 
-```typescript
-// Root component with routing and global state
-- AuthProvider
-- ChatProvider
-- ThemeProvider
-- Router
-  - /          → ChatView
-  - /admin     → AdminDashboard (protected)
-  - /login     → AuthView
-  - /profile   → UserProfile
-```
+##### 1. ChatView
 
-##### 2. ChatView
+**Location**: `frontend/src/components/chat/ChatView.tsx`
 
 ```typescript
-// Main chat interface
+// Main chat interface with message history and input
 Components:
-  - MessageList
-  - MessageInput
-  - TypingIndicator
-  - ContextSidebar (optional)
+  - ChatHeader (title, journey indicator, settings)
+  - MessageList (scrollable message display)
+  - MessageInput (text input with send button)
+  - ChatHistorySidebar (chat list, create new, pin/unpin)
+  - JourneySelector (select guided conversation path)
+  - VoiceConversation (voice input/output)
+  - SuggestionChips (quick-reply suggestions)
 
 State:
-  - messages: Message[]
+  - messages: Message[] (real-time Firestore listener)
   - isTyping: boolean
   - currentChat: Chat | null
+  - selectedJourney: Journey | null
 
 Hooks:
-  - useChat(chatId)
-  - useAutoSave()
-  - useScrollToBottom()
+  - useChat(chatId) - Chat management with real-time updates
+  - useAuth() - User authentication state
+  - useJourneys() - Journey data
 ```
 
-##### 3. AdminDashboard
+##### 2. ChatMessage
+
+**Location**: `frontend/src/components/chat/ChatMessage.tsx`
 
 ```typescript
-// Admin configuration panel
-Components:
-  - RepositoryManager
-  - SourceList
-  - IndexingStatus
-  - SystemSettings
-
-Features:
-  - Add/remove GitHub repositories
-  - Trigger manual re-indexing
-  - View indexing progress
-  - Configure system prompt
-  - Monitor usage stats
-```
-
-##### 4. RepositoryManager
-
-```typescript
-// GitHub repository configuration
-Features:
-  - Input GitHub URL
-  - Optional: GitHub token for private repos
-  - Display indexing progress
-  - Show indexed file count
-  - Cancel/retry operations
-  - Remove repository
-
-States:
-  - idle
-  - validating
-  - fetching
-  - indexing
-  - ready
-  - error
-```
-
-##### 5. ChatMessage
-
-```typescript
-// Individual message display
+// Individual message display with markdown support
 Props:
   - message: Message
-  - showTimestamp: boolean
+  - onRetry?: () => void (for error messages)
 
 Features:
-  - Markdown rendering
-  - Code syntax highlighting
-  - File path links
-  - Copy code button
-  - Citations display
+  - Role-based styling (user vs DMN)
+  - React Markdown rendering
+  - Code syntax highlighting (React Syntax Highlighter)
+  - Citations display with GitHub links
+  - Timestamp display
+  - Error state handling
+```
+
+##### 3. ChatHistorySidebar
+
+**Location**: `frontend/src/components/chat/ChatHistorySidebar.tsx`
+
+```typescript
+// Sidebar with chat history and management
+Features:
+  - List all user chats
+  - Create new chat
+  - Pin/unpin chats
+  - Rename chats
+  - Delete chats
+  - Filter/search chats
+  - Collapse/expand sidebar
+
+Hooks:
+  - Real-time Firestore listener for user chats
+  - Sort by: pinned first, then by updatedAt
+```
+
+##### 4. JourneySelector
+
+**Location**: `frontend/src/components/chat/JourneySelector.tsx`
+
+```typescript
+// Select guided conversation paths
+Features:
+  - Display active journeys
+  - Journey descriptions
+  - Custom icons (Lucide React)
+  - Apply journey to current chat
+  - Clear journey selection
+
+Data:
+  - Loads from journeys collection
+  - Filters to isActive: true
+```
+
+##### 5. VoiceConversation
+
+**Location**: `frontend/src/components/chat/VoiceConversation.tsx`
+
+```typescript
+// Voice input and output
+Features:
+  - Record audio via Web Audio API
+  - Convert to base64
+  - Send to sendVoiceMessage Cloud Function
+  - Display transcription
+  - Play TTS response
+
+State:
+  - isRecording: boolean
+  - isProcessing: boolean
+  - transcription: string | null
+```
+
+#### Admin Components
+
+##### 1. AdminDashboard
+
+**Location**: `frontend/src/components/admin/AdminDashboard.tsx`
+
+```typescript
+// Main admin interface with tabbed navigation
+Tabs:
+  - Overview (system stats, quick actions)
+  - Repository Manager (add/remove sources)
+  - Journey Manager (CRUD for journeys)
+  - User Management (view users, change roles)
+  - System Configuration (AI settings, member tiers)
+
+Access Control:
+  - Requires admin role
+  - Protected by Firebase security rules
+```
+
+##### 2. RepoManager (RepositoryPanel)
+
+**Location**: `frontend/src/components/admin/RepositoryPanel.tsx`
+
+```typescript
+// GitHub repository management
+Features:
+  - Add new repository (owner/repo/branch inputs)
+  - View all context sources
+  - Indexing progress indicators
+  - Re-index repositories
+  - Remove repositories
+  - View file/chunk counts
+
+States:
+  - pending (not yet indexed)
+  - indexing (with progress %)
+  - ready (available for search)
+  - error (with error message)
+
+Integration:
+  - Calls addContextSource Cloud Function
+  - Calls indexRepository Cloud Function
+  - Real-time status updates from Firestore
+```
+
+##### 3. JourneyManager
+
+**Location**: `frontend/src/components/admin/JourneyManager.tsx`
+
+```typescript
+// Manage guided conversation paths
+Features:
+  - Create new journey
+  - Edit existing journeys
+  - Delete journeys
+  - Toggle active/inactive
+  - Reorder journeys (drag-and-drop or order number)
+  - Preview system prompts
+
+Fields:
+  - title: string
+  - description: string
+  - systemPrompt: string (large textarea)
+  - icon: string (Lucide icon name)
+  - order: number
+  - isActive: boolean
+```
+
+##### 4. UserManagementPanel
+
+**Location**: `frontend/src/components/admin/UserManagementPanel.tsx`
+
+```typescript
+// User administration
+Features:
+  - List all users
+  - View user details (email, role, member level, message usage)
+  - Change user roles (user ↔ admin)
+  - Assign member levels
+  - View message usage statistics
+  - Search/filter users
+
+Integration:
+  - Calls updateUserRole Cloud Function
+  - Calls setAdminRole Cloud Function
+```
+
+##### 5. SystemConfigPanel
+
+**Location**: `frontend/src/components/admin/SystemConfigPanel.tsx`
+
+```typescript
+// System-wide configuration
+Sections:
+  - AI Configuration
+    - Model selection (gemini-2.0-flash-exp, etc.)
+    - Temperature slider (0.0-1.0)
+    - Max tokens input
+  - RAG Configuration
+    - Chunk size
+    - Chunk overlap
+    - Max chunks per query
+  - System Prompt Editor (large textarea)
+  - Member Levels Editor
+    - Add/edit/remove tiers
+    - Set messages per day limits
+    - Configure tier descriptions
+  - Default Member Level (dropdown)
+
+Storage:
+  - Updates systemConfig/settings document in Firestore
+```
+
+#### Authentication Components
+
+##### 1. AuthModal
+
+**Location**: `frontend/src/components/auth/AuthModal.tsx`
+
+```typescript
+// Sign up and sign in modal
+Features:
+  - Email/password authentication
+  - Toggle between sign up and sign in
+  - Password reset link
+  - Form validation
+  - Error handling and display
+
+Integration:
+  - Firebase Authentication SDK
+  - Calls createUserProfile Cloud Function on signup
+```
+
+### Custom Hooks
+
+**Location**: `frontend/src/hooks/`
+
+```typescript
+// useAuth.ts - Authentication state management
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  // Firebase onAuthStateChanged listener
+  return { user, loading, signIn, signUp, signOut };
+}
+
+// useChat.ts - Chat management with real-time updates
+export function useChat(chatId: string) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  // Real-time Firestore listener on messages subcollection
+  // Handles sendMessage, retry, error states
+  return { messages, sendMessage, isTyping, error };
+}
+
+// useJourneys.ts - Journey data management
+export function useJourneys() {
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  // Loads active journeys from Firestore
+  return { journeys, loading, error };
+}
+```
+
+### Services
+
+**Location**: `frontend/src/services/`
+
+```typescript
+// chatService.ts - Firestore CRUD for chats
+- createChat(userId, title, journeyId?)
+- getChat(userId, chatId)
+- getUserChats(userId)
+- deleteChat(userId, chatId)
+- renameChat(userId, chatId, newTitle)
+- togglePinChat(userId, chatId)
+
+// aiService.ts - AI communication
+- sendMessage(chatId, message, journeyId?) → calls Cloud Function
+- validateMessage(message) → prompt injection detection
+
+// journeyService.ts - Journey operations
+- getActiveJourneys()
+- getAllJourneys() (admin only)
+- createJourney(journey)
+- updateJourney(journeyId, updates)
+- deleteJourney(journeyId)
+
+// voiceService.ts - Voice features
+- recordAudio() → captures audio from microphone
+- sendVoiceMessage(audioData, chatId?) → calls Cloud Function
+
+// adminService.ts - Admin operations
+- addContextSource(type, config)
+- removeContextSource(sourceId)
+- indexRepository(sourceId, repoUrl, branch)
+- getSystemStats()
+- updateSystemConfig(config)
+
+// authService.ts - Authentication
+- signUp(email, password)
+- signIn(email, password)
+- signOut()
+- sendPasswordResetEmail(email)
 ```
 
 ### Backend Services
 
-#### 1. RAG Service (Context Retrieval)
+#### 1. Context Retrieval Service (Keyword-Based RAG)
+
+**Location**: `firebase-functions/src/context/searchContext.ts`
 
 ```typescript
-// Firebase Cloud Function: semantic-search
-interface RAGConfig {
-  maxChunks: number;        // Default: 10
-  minSimilarity: number;    // Default: 0.7
-  maxContextLength: number; // Default: 200,000 chars
+// Current implementation uses keyword-based search
+// Vector embeddings planned for future enhancement
+
+async function searchContext(query: string, maxResults: number = 5): Promise<Chunk[]> {
+  // 1. Fetch all chunks from Firestore
+  const chunksSnapshot = await db.collection('chunks').get();
+  
+  // 2. Score chunks based on keyword frequency
+  const scoredChunks = chunksSnapshot.docs.map(doc => {
+    const chunk = doc.data() as Chunk;
+    const score = calculateKeywordScore(chunk.content, query);
+    return { chunk, score };
+  });
+  
+  // 3. Sort by score and return top results
+  return scoredChunks
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults)
+    .map(item => item.chunk);
 }
 
-class RAGService {
-  // Search for relevant context chunks
-  async search(query: string, config: RAGConfig): Promise<Chunk[]> {
-    // 1. Generate query embedding
-    const queryEmbedding = await embedText(query);
-    
-    // 2. Vector similarity search in Firestore
-    const results = await vectorSearch(queryEmbedding, config.maxChunks);
-    
-    // 3. Filter by similarity threshold
-    const filtered = results.filter(r => r.similarity >= config.minSimilarity);
-    
-    // 4. Rank and select best chunks
-    const ranked = rankByRelevance(filtered, query);
-    
-    // 5. Return top-K chunks within context limit
-    return truncateToContextLimit(ranked, config.maxContextLength);
+function calculateKeywordScore(content: string, query: string): number {
+  // Simple keyword frequency matching
+  // Exact phrase matching gets higher weight
+  const queryLower = query.toLowerCase();
+  const contentLower = content.toLowerCase();
+  
+  // Exact phrase match
+  if (contentLower.includes(queryLower)) {
+    return 100;
   }
+  
+  // Individual keyword frequency
+  const keywords = queryLower.split(/\s+/);
+  const wordCounts = keywords.map(word => 
+    (contentLower.match(new RegExp(word, 'g')) || []).length
+  );
+  
+  return wordCounts.reduce((sum, count) => sum + count, 0);
 }
 ```
 
-#### 2. Indexing Service
+#### 2. Repository Indexing Service
+
+**Location**: `firebase-functions/src/context/indexRepository.ts`
 
 ```typescript
-// Firebase Cloud Function: index-repository
-interface IndexingJob {
-  repoId: string;
-  repoUrl: string;
-  branch: string;
-  githubToken?: string;
-}
+// Fully implemented GitHub repository indexing
 
-class IndexingService {
-  async indexRepository(job: IndexingJob): Promise<void> {
-    // 1. Fetch repository tree from GitHub
-    const files = await fetchRepoFiles(job.repoUrl, job.branch, job.githubToken);
+async function indexRepository(sourceId: string, repoUrl: string, branch: string): Promise<void> {
+  // 1. Parse repository URL
+  const { owner, repo } = parseGitHubUrl(repoUrl);
+  
+  // 2. Fetch repository tree from GitHub API
+  const response = await axios.get(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+    { headers: { Authorization: `token ${GITHUB_TOKEN}` } }
+  );
+  
+  // 3. Filter to markdown files only
+  const markdownFiles = response.data.tree.filter(file => 
+    file.type === 'blob' &&
+    file.path.endsWith('.md') &&
+    !isIgnoredPath(file.path)
+  );
+  
+  // 4. Update progress: indexing started
+  await updateSourceStatus(sourceId, 'indexing', 0);
+  
+  // 5. Process each file
+  for (let i = 0; i < markdownFiles.length; i++) {
+    const file = markdownFiles[i];
     
-    // 2. Filter relevant files (code, markdown, docs)
-    const relevant = filterFiles(files, ALLOWED_EXTENSIONS, IGNORED_DIRS);
+    // Download file content
+    const content = await fetchFileContent(owner, repo, file.path, branch);
     
-    // 3. Download file contents
-    const contents = await downloadFiles(relevant);
+    // Skip if too large (> 500KB)
+    if (content.length > 500000) continue;
     
-    // 4. Chunk content (1500 chars, 200 overlap)
-    const chunks = chunkContent(contents);
+    // Chunk content (1500 chars, 200 overlap)
+    const chunks = chunkContent(file.path, content);
     
-    // 5. Generate embeddings (batch process)
-    const embeddings = await generateEmbeddings(chunks);
+    // Store chunks in Firestore
+    await storeChunks(sourceId, `${owner}/${repo}`, chunks, file.sha);
     
-    // 6. Store in Firestore + Cloud Storage
-    await storeChunks(chunks, embeddings);
-    
-    // 7. Update repository status
-    await updateRepoStatus(job.repoId, 'ready');
+    // Update progress
+    const progress = Math.round(((i + 1) / markdownFiles.length) * 100);
+    await updateSourceStatus(sourceId, 'indexing', progress);
   }
-}
-```
-
-#### 3. Chat Service
-
-```typescript
-// Firebase Cloud Function: send-message
-interface ChatRequest {
-  userId: string;
-  chatId: string;
-  message: string;
+  
+  // 6. Mark as ready
+  await updateSourceStatus(sourceId, 'ready', 100);
 }
 
-class ChatService {
-  async handleMessage(req: ChatRequest): Promise<void> {
-    // 1. Authenticate user
-    const user = await verifyAuth(req.userId);
+function chunkContent(filePath: string, content: string): ChunkData[] {
+  const chunks: ChunkData[] = [];
+  const CHUNK_SIZE = 1500;
+  const OVERLAP = 200;
+  let start = 0;
+  let index = 0;
+  
+  while (start < content.length) {
+    const end = Math.min(start + CHUNK_SIZE, content.length);
+    let chunk = content.slice(start, end);
     
-    // 2. Retrieve chat history
-    const history = await getChatHistory(req.chatId);
-    
-    // 3. Search for relevant context
-    const context = await ragService.search(req.message);
-    
-    // 4. Build prompt with context
-    const prompt = buildPrompt(req.message, context, history);
-    
-    // 5. Stream response from Gemini
-    const stream = await gemini.generateContentStream(prompt);
-    
-    // 6. Save messages to Firestore
-    await saveMessage(req.chatId, { role: 'user', text: req.message });
-    
-    let fullResponse = '';
-    for await (const chunk of stream) {
-      fullResponse += chunk.text();
-      // Stream to client via SSE or WebSocket
-      yield chunk.text();
+    // Break at paragraph or sentence boundaries
+    if (end < content.length) {
+      const lastNewline = chunk.lastIndexOf('\n\n');
+      const lastPeriod = chunk.lastIndexOf('. ');
+      const breakPoint = Math.max(lastNewline, lastPeriod);
+      
+      if (breakPoint > CHUNK_SIZE * 0.5) {
+        chunk = chunk.slice(0, breakPoint + 1);
+      }
     }
     
-    // 7. Save AI response
-    await saveMessage(req.chatId, { role: 'model', text: fullResponse });
+    chunks.push({
+      filePath,
+      content: chunk.trim(),
+      chunkIndex: index++
+    });
+    
+    start = end - OVERLAP;
+  }
+  
+  return chunks;
+}
+
+// Ignored directories
+const IGNORED_DIRS = ['node_modules', '.git', 'dist', 'build', '__pycache__', 'venv', 'vendor', 'target', '.next'];
+```
+
+#### 3. Chat Service with Message Limits
+
+**Location**: `firebase-functions/src/chat/sendMessage.ts`
+
+```typescript
+// Handles message sending with RAG and member tier limits
+
+export const sendMessage = onCall(async (request) => {
+  // 1. Authenticate user
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  
+  const { chatId, message, journeyId } = request.data;
+  const userId = request.auth.uid;
+  
+  // 2. Load system config
+  const systemConfig = await loadSystemConfig();
+  
+  // 3. Check message limits (member tier enforcement)
+  const userDoc = await db.collection('users').doc(userId).get();
+  const user = userDoc.data();
+  
+  const memberLevel = systemConfig.memberLevels.find(
+    level => level.name === user.memberLevel
+  );
+  
+  if (user.messageUsage.count >= memberLevel.messagesPerDay) {
+    throw new HttpsError('resource-exhausted', 'Daily message limit reached');
+  }
+  
+  // 4. Validate and sanitize message (prompt injection check)
+  validateMessage(message);
+  
+  // 5. Retrieve conversation history (last 10 messages)
+  const messagesRef = db.collection('users').doc(userId)
+    .collection('chats').doc(chatId)
+    .collection('messages');
+  
+  const historySnapshot = await messagesRef
+    .orderBy('timestamp', 'desc')
+    .limit(10)
+    .get();
+  
+  const history = historySnapshot.docs
+    .reverse()
+    .map(doc => doc.data());
+  
+  // 6. Search for relevant context chunks
+  const contextChunks = await retrieveContext(db, message, systemConfig.rag.maxChunks);
+  
+  // 7. Build prompt with context and history
+  const contextSection = formatContextSection(contextChunks);
+  const historySection = formatHistorySection(history);
+  
+  // 8. Get journey-specific system prompt if applicable
+  let effectiveSystemPrompt = systemConfig.systemPrompt;
+  if (journeyId) {
+    const journeyDoc = await db.collection('journeys').doc(journeyId).get();
+    if (journeyDoc.exists) {
+      effectiveSystemPrompt = journeyDoc.data().systemPrompt;
+    }
+  }
+  
+  // 9. Generate response using Genkit + Gemini
+  const { text } = await ai.generate({
+    model: googleAI.model(systemConfig.ai.model),  // gemini-2.0-flash-exp
+    prompt: `${effectiveSystemPrompt}${contextSection}${historySection}\n\nUser: ${message}\n\nDMN:`,
+    config: {
+      temperature: systemConfig.ai.temperature,
+      maxOutputTokens: systemConfig.ai.maxTokens
+    }
+  });
+  
+  // 10. Generate citations from context chunks
+  const citations = generateCitations(contextChunks);
+  
+  // 11. Save user message
+  await messagesRef.add({
+    role: 'user',
+    text: message,
+    timestamp: FieldValue.serverTimestamp()
+  });
+  
+  // 12. Save AI response
+  const responseRef = await messagesRef.add({
+    role: 'model',
+    text,
+    citations,
+    timestamp: FieldValue.serverTimestamp()
+  });
+  
+  // 13. Update message usage counter
+  await db.collection('users').doc(userId).update({
+    'messageUsage.count': FieldValue.increment(1)
+  });
+  
+  return {
+    messageId: responseRef.id,
+    responseText: text,
+    citations
+  };
+});
+```
+
+#### 4. Voice Message Service
+
+**Location**: `firebase-functions/src/chat/sendVoiceMessage.ts`
+
+```typescript
+// Transcribes audio and generates response
+
+export const sendVoiceMessage = onCall(async (request) => {
+  const { audioData, chatId } = request.data;
+  
+  // 1. Transcribe audio using Gemini
+  const { text: transcription } = await ai.generate({
+    model: googleAI.model('googleai/gemini-2.5-flash'),
+    prompt: [
+      { media: { url: `data:audio/webm;base64,${audioData}` } },
+      { text: 'Transcribe this audio.' }
+    ]
+  });
+  
+  // 2. Generate response (similar to sendMessage)
+  const response = await generateResponse(transcription, chatId);
+  
+  // 3. Generate audio response using TTS
+  const audioResponse = await generateSpeech(response.text);
+  
+  return {
+    transcription,
+    response: response.text,
+    citations: response.citations,
+    audioResponse
+  };
+});
+```
   }
 }
 ```
@@ -566,6 +961,18 @@ interface User {
     notifications: boolean;
   };
   role: 'user' | 'admin';
+  memberLevel: string;      // e.g., 'free', 'seeker', 'awakened', 'enlightened'
+  messageUsage: {
+    count: number;          // Messages sent today
+    resetAt: Timestamp;     // When counter resets (daily)
+  };
+}
+
+interface MemberLevel {
+  name: string;             // 'free', 'seeker', etc.
+  displayName: string;      // Display name for UI
+  messagesPerDay: number;   // Daily message limit
+  description: string;      // Description of tier
 }
 ```
 
@@ -576,7 +983,8 @@ interface Chat {
   id: string;               // Auto-generated ID
   userId: string;           // Owner
   title: string;            // Auto-generated from first message
-  messages: Message[];
+  journeyId?: string;       // Optional journey reference
+  isPinned: boolean;        // Pin to top of chat list
   createdAt: Timestamp;
   updatedAt: Timestamp;
   metadata: {
@@ -586,6 +994,7 @@ interface Chat {
   };
 }
 
+// Messages stored in subcollection: chats/{chatId}/messages/{messageId}
 interface Message {
   id: string;
   role: 'user' | 'model';
@@ -603,39 +1012,50 @@ interface Citation {
 }
 ```
 
+### Journey Model
+
+```typescript
+interface Journey {
+  id: string;               // Auto-generated ID
+  title: string;            // e.g., "Introduction to Neuro-Gnostic Framework"
+  description: string;      // Journey description
+  systemPrompt: string;     // Custom system prompt for this journey
+  icon?: string;            // Icon name from Lucide React
+  order: number;            // Display order
+  isActive: boolean;        // Show in journey selector
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  createdBy: string;        // Admin user ID
+}
+```
+
 ### Context Source Model
 
 ```typescript
 interface ContextSource {
   id: string;               // Auto-generated
-  type: 'github';           // Future: 'url', 'pdf', 'notion'
+  type: 'github';           // Currently only GitHub supported
   config: GitHubSourceConfig;
   status: {
-    state: 'pending' | 'indexing' | 'ready' | 'error' | 'disabled';
+    state: 'pending' | 'indexing' | 'ready' | 'error';
     progress: number;       // 0-100
     lastSync: Timestamp;
-    nextSync: Timestamp;
     error?: string;
   };
   stats: {
     fileCount: number;
     chunkCount: number;
-    totalSize: number;
-    embeddingDimension: number;
   };
-  createdBy: string;        // Admin user ID
   createdAt: Timestamp;
   isActive: boolean;
 }
 
 interface GitHubSourceConfig {
-  owner: string;
-  repo: string;
-  branch: string;
-  path?: string;            // Optional: specific directory
-  allowedExtensions: string[];
-  ignoredPaths: string[];
-  usePrivateToken: boolean;
+  owner: string;            // GitHub username or org
+  repo: string;             // Repository name
+  branch: string;           // Branch name (e.g., 'main')
+  // Note: Currently filters to .md files only
+  // Ignores: node_modules, .git, dist, build, etc.
 }
 ```
 
@@ -643,21 +1063,21 @@ interface GitHubSourceConfig {
 
 ```typescript
 interface Chunk {
-  id: string;               // Composite: {repoId}-{fileHash}-{index}
+  id: string;               // Auto-generated
   sourceId: string;         // Reference to ContextSource
   repoName: string;         // e.g., "ClaimFreedomDotOrg/Neuro-Gnostic-Docs"
-  filePath: string;
-  content: string;          // 1500 chars max
-  contentHash: string;      // SHA-256 for deduplication
-  embedding: number[];      // 768-dim vector (Gemini) or 1536-dim (OpenAI)
+  filePath: string;         // Path within repository
+  content: string;          // Chunk text (approx 1500 chars)
+  chunkIndex: number;       // Position in file (0-indexed)
   metadata: {
-    language: string;       // Programming language or 'markdown'
-    tokens: number;         // Token count
-    chunkIndex: number;     // Position in file
-    overlap: number;        // Overlap chars with previous chunk
+    language: string;       // 'markdown' for .md files
+    sha: string;            // Git SHA for the file
   };
   createdAt: Timestamp;
 }
+
+// Note: Vector embeddings are planned but not yet implemented
+// Current search uses keyword-based matching with frequency scoring
 ```
 
 ### System Configuration
@@ -665,108 +1085,162 @@ interface Chunk {
 ```typescript
 interface SystemConfig {
   ai: {
-    provider: 'gemini' | 'openai';
-    model: string;
-    temperature: number;
-    maxTokens: number;
-    topP: number;
+    model: string;          // e.g., "gemini-2.0-flash-exp"
+    temperature: number;    // 0.0-1.0
+    maxTokens: number;      // Response length limit
   };
   rag: {
-    chunkSize: number;
-    chunkOverlap: number;
-    maxChunks: number;
-    minSimilarity: number;
-    embeddingModel: string;
+    chunkSize: number;      // Characters per chunk (default: 1500)
+    chunkOverlap: number;   // Overlap between chunks (default: 200)
+    maxChunks: number;      // Max chunks to retrieve (default: 5)
+    minSimilarity: number;  // Threshold for relevance (default: 0.7, currently unused)
   };
-  github: {
-    token?: string;         // Optional global token
-    rateLimitBuffer: number;
-  };
-  features: {
-    userSignup: boolean;
-    adminOnly: boolean;
-    streamingResponses: boolean;
-  };
-  systemPrompt: string;     // Customizable prompt template
+  systemPrompt: string;     // Default system prompt template
+  memberLevels: MemberLevel[];  // Available member tiers
+  defaultMemberLevel: string;   // Default tier for new users
 }
 ```
+
+**Storage Location**: Firestore collection `systemConfig` document `settings`
 
 ---
 
 ## API Design
 
-### REST API Endpoints
+### Firebase Cloud Functions (Callable Functions)
 
-#### Authentication
+The application uses Firebase Callable Functions (not REST endpoints). These are called from the client using the Firebase SDK's `httpsCallable` method.
 
-```http
-POST   /api/auth/signup          # Create new user account
-POST   /api/auth/login           # Email/password login
-POST   /api/auth/logout          # End session
-POST   /api/auth/reset-password  # Password reset
-GET    /api/auth/verify          # Verify token
-```
-
-#### Chat Operations
-
-```http
-POST   /api/chats                # Create new chat
-GET    /api/chats                # List user's chats
-GET    /api/chats/{chatId}       # Get chat details
-DELETE /api/chats/{chatId}       # Delete chat
-POST   /api/chats/{chatId}/messages  # Send message (streaming)
-```
-
-#### Context Management (Admin Only)
-
-```http
-POST   /api/admin/sources               # Add context source
-GET    /api/admin/sources               # List all sources
-GET    /api/admin/sources/{sourceId}   # Get source details
-PUT    /api/admin/sources/{sourceId}   # Update source config
-DELETE /api/admin/sources/{sourceId}   # Remove source
-POST   /api/admin/sources/{sourceId}/reindex  # Trigger re-indexing
-GET    /api/admin/sources/{sourceId}/status   # Get indexing status
-```
-
-#### User Management
-
-```http
-GET    /api/users/me             # Get current user profile
-PUT    /api/users/me             # Update profile
-GET    /api/users/me/chats       # Get user's chat list
-DELETE /api/users/me             # Delete account (GDPR)
-```
-
-#### System (Admin Only)
-
-```http
-GET    /api/admin/stats          # System statistics
-GET    /api/admin/config         # Get system config
-PUT    /api/admin/config         # Update system config
-POST   /api/admin/test-prompt    # Test prompt with sample query
-```
-
-### WebSocket/SSE for Streaming
+#### Chat Functions
 
 ```typescript
-// Server-Sent Events (SSE) for streaming responses
-GET /api/chats/{chatId}/stream
+// Send a message and get AI response
+sendMessage(data: {
+  chatId: string;
+  message: string;
+  journeyId?: string;
+}): Promise<{
+  messageId: string;
+  responseText: string;
+  citations: Citation[];
+}>
 
-// Client connection:
-const eventSource = new EventSource('/api/chats/{chatId}/stream');
-
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'chunk') {
-    appendToMessage(data.text);
-  } else if (data.type === 'complete') {
-    finalizeMessage(data.messageId);
-  } else if (data.type === 'error') {
-    showError(data.error);
-  }
-};
+// Send voice message (transcribe + respond)
+sendVoiceMessage(data: {
+  audioData: string;        // Base64 encoded audio
+  chatId?: string;
+}): Promise<{
+  transcription: string;
+  response: string;
+  citations: Citation[];
+}>
 ```
+
+#### Context Management Functions (Admin Only)
+
+```typescript
+// Add a new GitHub repository as context source
+addContextSource(data: {
+  type: 'github';
+  config: {
+    owner: string;
+    repo: string;
+    branch: string;
+  };
+}): Promise<{ sourceId: string }>
+
+// Remove a context source and its chunks
+removeContextSource(data: {
+  sourceId: string;
+}): Promise<{ success: boolean }>
+
+// Trigger repository indexing
+indexRepository(data: {
+  sourceId: string;
+  repoUrl: string;
+  branch: string;
+}): Promise<{ status: string }>
+
+// Search context chunks (keyword-based)
+searchContext(data: {
+  query: string;
+  maxResults?: number;
+}): Promise<{ chunks: Chunk[] }>
+
+// Get system statistics
+getSystemStats(): Promise<{
+  totalChats: number;
+  totalMessages: number;
+  totalChunks: number;
+  activeSources: number;
+}>
+```
+
+#### User Management Functions
+
+```typescript
+// Create user profile (called on signup)
+createUserProfile(data: {
+  uid: string;
+  email: string;
+}): Promise<{ success: boolean }>
+
+// Update user role
+updateUserRole(data: {
+  userId: string;
+  role: 'user' | 'admin';
+}): Promise<{ success: boolean }>
+
+// Set admin role (grant/revoke)
+setAdminRole(data: {
+  userId: string;
+  isAdmin: boolean;
+}): Promise<{ success: boolean }>
+
+// Delete user data (GDPR)
+deleteUserData(data: {
+  userId: string;
+}): Promise<{ success: boolean }>
+```
+
+### Client-Side Firestore Operations
+
+Chat and journey management is handled directly via Firestore SDK on the client:
+
+```typescript
+// Chat operations (via chatService.ts)
+- createChat(userId: string, title: string, journeyId?: string)
+- getChat(userId: string, chatId: string)
+- getUserChats(userId: string)
+- deleteChat(userId: string, chatId: string)
+- renameChat(userId: string, chatId: string, newTitle: string)
+- togglePinChat(userId: string, chatId: string)
+
+// Message operations
+- Real-time listeners on users/{uid}/chats/{chatId}/messages
+
+// Journey operations (via journeyService.ts)
+- getActiveJourneys()
+- getAllJourneys()
+- getJourneyById(journeyId: string)
+- createJourney(journey: Journey)
+- updateJourney(journeyId: string, updates: Partial<Journey>)
+- deleteJourney(journeyId: string)
+```
+
+### Authentication
+
+Authentication is handled by Firebase Authentication SDK:
+
+```typescript
+- signUp(email: string, password: string)
+- signIn(email: string, password: string)
+- signOut()
+- sendPasswordResetEmail(email: string)
+- onAuthStateChanged(callback)
+```
+
+**Note**: Streaming responses are planned but not yet implemented. Current implementation returns complete responses.
 
 ---
 
@@ -1476,6 +1950,155 @@ Sentry.init({
   environment: process.env.NODE_ENV
 });
 ```
+
+---
+
+## Implementation Status
+
+### ✅ Fully Implemented Features
+
+#### Core Chat Functionality
+- ✅ **Chat Interface**: Complete chat UI with message history, input, and real-time updates
+- ✅ **Message Management**: Create, send, display messages with role-based styling
+- ✅ **Chat Management**: Create, rename, delete, pin/unpin chats
+- ✅ **Chat History Sidebar**: Navigate between chats, search, and organize
+- ✅ **Citations**: Display source references with GitHub links
+
+#### Authentication & User Management
+- ✅ **Firebase Authentication**: Email/password sign up and sign in
+- ✅ **User Profiles**: User profile creation and management
+- ✅ **Role Management**: User and admin roles with proper access control
+- ✅ **Member Tiers**: Configurable member levels with daily message limits
+- ✅ **Usage Tracking**: Daily message counter with automatic reset
+
+#### Journey System
+- ✅ **Journey Model**: Guided conversation paths with custom system prompts
+- ✅ **Journey Selector**: UI component to choose journey for chat
+- ✅ **Journey Management**: Admin CRUD operations for journeys
+- ✅ **Journey Integration**: Apply journey-specific prompts in AI responses
+
+#### Context Management & RAG
+- ✅ **GitHub Integration**: Fetch repository files via GitHub API
+- ✅ **Repository Indexing**: Full indexing pipeline for markdown files
+- ✅ **Content Chunking**: Smart chunking (1500 chars, 200 overlap) with boundary detection
+- ✅ **Chunk Storage**: Store chunks in Firestore with metadata
+- ✅ **Keyword Search**: Frequency-based keyword matching for context retrieval
+- ✅ **Context Injection**: Include relevant chunks in AI prompts
+- ✅ **File Filtering**: Filter to .md files only, ignore common build directories
+
+#### AI Integration
+- ✅ **Genkit Framework**: Integration with @genkit-ai packages
+- ✅ **Gemini 2.0 Flash**: Using gemini-2.0-flash-exp model
+- ✅ **Configurable AI Settings**: Temperature, max tokens via system config
+- ✅ **System Prompts**: Default and journey-specific prompt templates
+- ✅ **Conversation History**: Include last 10 messages in context
+
+#### Voice Features
+- ✅ **Voice Recording**: Capture audio via Web Audio API
+- ✅ **Audio Transcription**: Convert speech to text using Gemini
+- ✅ **Voice Response**: Generate spoken responses with TTS
+- ✅ **Voice UI Component**: Complete voice conversation interface
+
+#### Admin Dashboard
+- ✅ **Repository Management**: Add, remove, re-index GitHub repositories
+- ✅ **Repository Status**: Track indexing progress and status
+- ✅ **Journey Management**: Full CRUD for guided conversation paths
+- ✅ **User Management**: View users, change roles, manage access
+- ✅ **System Configuration**: Edit AI settings, RAG config, member tiers
+- ✅ **System Stats**: View usage statistics and system metrics
+
+#### Security & Validation
+- ✅ **Firestore Security Rules**: Proper access control for all collections
+- ✅ **Authentication Checks**: Verify auth on all Cloud Functions
+- ✅ **Prompt Injection Detection**: Basic validation to prevent prompt injection
+- ✅ **Input Validation**: Message length and content validation
+- ✅ **Rate Limiting**: Per-user message limits based on member tier
+
+### 🚧 Partially Implemented / In Progress
+
+#### Context Retrieval
+- 🚧 **Vector Embeddings**: Planned but not yet implemented
+  - Current: Keyword-based search with frequency scoring
+  - Planned: Semantic search with vector embeddings
+- 🚧 **Semantic Similarity**: minSimilarity config exists but not used
+  - Current: Simple keyword matching
+  - Planned: Cosine similarity with embedding vectors
+
+#### Response Streaming
+- 🚧 **Streaming API**: Function stub exists but not implemented
+  - Current: Complete responses only
+  - Planned: Token-by-token streaming via SSE or WebSocket
+
+### ❌ Not Yet Implemented
+
+#### Advanced Features
+- ❌ **Chat History API**: getChatHistory Cloud Function stub exists but empty
+- ❌ **Cache Updates**: updateCache Cloud Function not implemented
+- ❌ **Private Repositories**: GitHub token support in indexing
+- ❌ **Multiple File Types**: Currently only .md files supported
+- ❌ **Reindexing Detection**: Automatic reindexing on repo changes
+- ❌ **Vector Database Migration**: Currently using Firestore for chunks
+
+#### Future Enhancements
+- ❌ **Google OAuth**: Additional authentication method
+- ❌ **Anonymous Mode**: Guest access with limited features
+- ❌ **Export Chat History**: Download conversations
+- ❌ **Advanced Analytics**: Detailed usage metrics and insights
+- ❌ **Multi-language Support**: I18n beyond English
+- ❌ **Dark/Light Theme Toggle**: Currently dark theme only
+
+### Technology Stack Summary
+
+**Current Implementation:**
+- Frontend: React 19 + TypeScript + Vite + TailwindCSS
+- Backend: Firebase (Firestore, Auth, Functions, Storage)
+- AI: Genkit + Gemini 2.0 Flash Experimental
+- Search: Keyword-based frequency matching
+- Hosting: Cloudflare Pages (planned, currently local dev)
+
+**Dependencies:**
+```json
+Frontend:
+  - react: ^19.2.0
+  - firebase: ^11.1.0
+  - react-markdown: ^10.1.0
+  - lucide-react: ^0.562.0
+
+Backend (Functions):
+  - firebase-functions: ^7.0.2
+  - firebase-admin: ^13.6.0
+  - genkit: ^1.27.0
+  - @genkit-ai/google-genai: ^1.27.0
+  - axios: ^1.7.0
+```
+
+### File Statistics (as of February 2026)
+
+**Collection Structure:**
+```
+Firestore Collections:
+  - users/{uid}
+    - chats/{chatId}
+      - messages/{messageId}
+  - journeys/{journeyId}
+  - contextSources/{sourceId}
+  - chunks/{chunkId}
+  - systemConfig/settings
+```
+
+**Implementation Files:**
+- Frontend Components: ~20 files
+- Backend Functions: ~15 files
+- TypeScript Types: Defined in frontend/src/types/
+- Services: 6 main service files
+
+### Next Priority Items
+
+1. **Vector Embeddings**: Implement semantic search with Gemini embeddings
+2. **Streaming Responses**: Enable real-time token streaming
+3. **Cloudflare Deployment**: Deploy frontend to production
+4. **Testing Suite**: Add comprehensive tests
+5. **Documentation**: API documentation and user guides
 
 ---
 
