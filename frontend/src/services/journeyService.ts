@@ -4,7 +4,7 @@
  * Handles CRUD operations for Journeys
  */
 
-import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, FirestoreError, QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { Journey } from '@/types';
 
@@ -16,7 +16,7 @@ export async function getActiveJourneys(): Promise<Journey[]> {
   const q = query(journeysRef, where('isActive', '==', true), orderBy('order', 'asc'));
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map(doc => ({
+  return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
     id: doc.id,
     ...doc.data(),
   })) as Journey[];
@@ -30,7 +30,7 @@ export async function getAllJourneys(): Promise<Journey[]> {
   const q = query(journeysRef, orderBy('order', 'asc'));
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map(doc => ({
+  return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
     id: doc.id,
     ...doc.data(),
   })) as Journey[];
@@ -62,13 +62,21 @@ export function subscribeToActiveJourneys(
   const journeysRef = collection(db, 'journeys');
   const q = query(journeysRef, where('isActive', '==', true), orderBy('order', 'asc'));
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const journeys = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Journey[];
-    callback(journeys);
-  });
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const journeys = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Journey[];
+      callback(journeys);
+    },
+    (error: FirestoreError) => {
+      console.error('Error subscribing to active journeys:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 
   return unsubscribe;
 }
@@ -82,13 +90,21 @@ export function subscribeToAllJourneys(
   const journeysRef = collection(db, 'journeys');
   const q = query(journeysRef, orderBy('order', 'asc'));
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const journeys = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Journey[];
-    callback(journeys);
-  });
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const journeys = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Journey[];
+      callback(journeys);
+    },
+    (error: FirestoreError) => {
+      console.error('Error subscribing to all journeys:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 
   return unsubscribe;
 }

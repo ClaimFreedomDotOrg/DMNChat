@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, onSnapshot, serverTimestamp, FirestoreError, QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from './firebase';
 import { Repository, SystemConfig } from '@/types';
@@ -96,7 +96,7 @@ export const addContextSource = async (repoUrl: string, branch: string = 'main')
       sourceId: sourceDoc.id,
       repoUrl: `https://github.com/${parsed.owner}/${parsed.repo}`,
       branch: finalBranch
-    }).catch(error => {
+    }).catch((error: Error) => {
       console.error('Error triggering indexing:', error);
     });
 
@@ -129,7 +129,7 @@ export const getContextSources = async (): Promise<Repository[]> => {
     const sourcesRef = collection(db, 'contextSources');
     const snapshot = await getDocs(sourcesRef);
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -157,23 +157,31 @@ export const subscribeToContextSources = (
 ): (() => void) => {
   const sourcesRef = collection(db, 'contextSources');
 
-  return onSnapshot(sourcesRef, (snapshot) => {
-    const repos = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: `${data.config.owner}/${data.config.repo}`,
-        url: `https://github.com/${data.config.owner}/${data.config.repo}`,
-        branch: data.config.branch,
-        status: data.status.state,
-        progress: data.status.progress,
-        fileCount: data.stats.fileCount,
-        chunkCount: data.stats.chunkCount,
-        error: data.status.error
-      } as Repository;
-    });
-    callback(repos);
-  });
+  return onSnapshot(
+    sourcesRef,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const repos = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: `${data.config.owner}/${data.config.repo}`,
+          url: `https://github.com/${data.config.owner}/${data.config.repo}`,
+          branch: data.config.branch,
+          status: data.status.state,
+          progress: data.status.progress,
+          fileCount: data.stats.fileCount,
+          chunkCount: data.stats.chunkCount,
+          error: data.status.error
+        } as Repository;
+      });
+      callback(repos);
+    },
+    (error: FirestoreError) => {
+      console.error('Error subscribing to context sources:', error);
+      // Return empty array on error to prevent component crashes
+      callback([]);
+    }
+  );
 };
 
 /**
